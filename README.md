@@ -112,8 +112,18 @@ phishguard-mvp/
 
 ## Screenshots 
 
-<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/4fd32b07-da16-4639-8377-d7a668bf9357" />
-<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/47b722f5-99c9-463a-bba5-e40767711333" />
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/e28de7a4-6e2c-40da-8224-24646d65e662" />
+
+
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/2e644890-f6e4-4e34-8d92-3c0932ef43e9" />
+
+
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/892bc006-a83f-4a74-884f-0982e43c39c3" />
+
+
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/9fcf8b99-ffbd-4ac4-837c-5703e9bb0e1c" />
+
+
 
 
 
