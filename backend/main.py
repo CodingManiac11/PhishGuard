@@ -4,7 +4,13 @@ from fastapi.responses import HTMLResponse
 from typing import List, Optional
 import json
 import logging
+import os
+import warnings
 from datetime import datetime
+
+# Suppress TensorFlow warnings
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+warnings.filterwarnings('ignore', category=RuntimeWarning)
 
 from config import settings
 
@@ -80,7 +86,7 @@ async def read_index():
 async def submit_url(url_submission: URLSubmission):
     """Submit a URL for phishing detection"""
     try:
-        result = monitoring_service.submit_url_for_scanning(
+        result = await monitoring_service.submit_url_for_scanning(
             url_submission.url, 
             url_submission.cse_hint
         )

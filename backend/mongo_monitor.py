@@ -245,7 +245,7 @@ class MongoMonitoringService:
             if prediction_result is None or not isinstance(prediction_result, dict):
                 logger.error(f"Invalid prediction_result: {type(prediction_result)}: {prediction_result}")
                 return {
-                    'prediction': 'suspicious',
+                    'classification': 'suspicious',
                     'threat_level': 'MEDIUM',
                     'confidence_score': 0.5,
                     'phishing_probability': 0.5,
@@ -262,7 +262,7 @@ class MongoMonitoringService:
                 risk_factors = []
                 
             return {
-                'prediction': prediction_result.get('prediction', 'suspicious'),
+                'classification': prediction_result.get('prediction', 'suspicious'),
                 'threat_level': prediction_result.get('threat_level', 'MEDIUM'),
                 'confidence_score': prediction_result.get('confidence_score', 0.5),
                 'phishing_probability': prediction_result.get('phishing_probability', 0.5),
