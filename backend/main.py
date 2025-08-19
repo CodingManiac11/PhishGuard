@@ -291,9 +291,22 @@ async def get_stats():
             total_detections = await Detection.count()
             total_labels = await Label.count()
             
-            phishing_count = await Detection.find({"classification": "phishing"}).count()
-            suspected_count = await Detection.find({"classification": "suspected"}).count()
-            benign_count = await Detection.find({"classification": "benign"}).count()
+            # Get unique URL counts by getting the latest detection for each URL
+            detections = await Detection.find().to_list()
+            
+            # Group detections by URL and get the latest one for each
+            url_latest_detections = {}
+            for detection in detections:
+                url_id = detection.url_id
+                if url_id not in url_latest_detections:
+                    url_latest_detections[url_id] = detection
+                elif detection.detection_time > url_latest_detections[url_id].detection_time:
+                    url_latest_detections[url_id] = detection
+            
+            # Count unique classifications
+            phishing_count = sum(1 for d in url_latest_detections.values() if d.classification == "phishing")
+            suspected_count = sum(1 for d in url_latest_detections.values() if d.classification == "suspicious")
+            benign_count = sum(1 for d in url_latest_detections.values() if d.classification == "benign")
         else:
             # SQLite fallback
             total_urls = 0
@@ -308,7 +321,7 @@ async def get_stats():
             "total_detections": total_detections,
             "total_labels": total_labels,
             "phishing_count": phishing_count,
-            "suspected_count": suspected_count,
+            "suspicious_count": suspected_count,
             "benign_count": benign_count,
             "monitoring_active": monitoring_service.is_running,
             "database_type": "MongoDB Atlas" if settings.use_mongodb else "SQLite"
