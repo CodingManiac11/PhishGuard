@@ -86,15 +86,24 @@ async def read_index():
 async def submit_url(url_submission: URLSubmission):
     """Submit a URL for phishing detection"""
     try:
+        logger.info(f"Processing URL submission: {url_submission.url}")
         result = await monitoring_service.submit_url_for_scanning(
             url_submission.url, 
             url_submission.cse_hint
         )
         
+        logger.info(f"Monitoring service returned: {type(result)} with keys: {result.keys() if isinstance(result, dict) else 'Not a dict'}")
+        
+        # Debug log the result structure
+        if isinstance(result, dict):
+            for key, value in result.items():
+                logger.info(f"  {key}: {type(value)} = {value}")
+        
         return ScanResult(**result)
         
     except Exception as e:
         logger.error(f"Error processing URL submission: {e}")
+        logger.error(f"Result that caused error: {result if 'result' in locals() else 'result not available'}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

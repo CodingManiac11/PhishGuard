@@ -130,6 +130,7 @@ class MongoMonitoringService:
     
     async def submit_url_for_scanning(self, url: str, cse_hint: Optional[str] = None) -> dict:
         """Submit a URL for enhanced precision scanning"""
+        logger.info(f"MongoMonitoringService.submit_url_for_scanning called for: {url}")
         try:
             # Check if URL already exists
             existing_url = await URLRecord.find_one({"url": url})
@@ -261,7 +262,8 @@ class MongoMonitoringService:
             if risk_factors is None:
                 risk_factors = []
                 
-            return {
+            # Ensure we NEVER return the raw prediction_result dict
+            final_result = {
                 'classification': prediction_result.get('prediction', 'suspicious'),
                 'threat_level': prediction_result.get('threat_level', 'MEDIUM'),
                 'confidence_score': prediction_result.get('confidence_score', 0.5),
@@ -272,6 +274,9 @@ class MongoMonitoringService:
                 'scan_id': str(detection.id),
                 'explanation': prediction_result.get('model_explanation', 'Analysis complete')
             }
+            
+            logger.info(f"Final result structure: {final_result.keys()}")
+            return final_result
             
         except Exception as e:
             logger.error(f"Error scanning URL {url}: {e}")
@@ -341,15 +346,18 @@ class SQLiteMonitoringService:
     
     def submit_url_for_scanning(self, url: str, cse_hint: Optional[str] = None) -> dict:
         """Submit a URL for immediate scanning (sync version for SQLite)"""
+        logger.info(f"SQLiteMonitoringService.submit_url_for_scanning called for: {url}")
         # Simplified implementation for demonstration
         features = self.feature_extractor.extract_features(url, cse_hint)
-        classification, confidence = self.classifier.predict(features)
+        prediction_result = self.classifier.predict(features)
         
         return {
-            'classification': classification,
-            'confidence_score': confidence,
+            'classification': prediction_result.get('prediction', 'suspicious'),
+            'confidence_score': prediction_result.get('confidence_score', 0.5),
             'features': features,
-            'evidence_path': None
+            'evidence_path': None,
+            'threat_level': prediction_result.get('threat_level', 'MEDIUM'),
+            'explanation': prediction_result.get('model_explanation', 'Analysis complete')
         }
     
     def retrain_model(self):
@@ -359,6 +367,8 @@ class SQLiteMonitoringService:
 
 # Create the appropriate monitoring service based on configuration
 if settings.use_mongodb:
+    print(f"Creating MongoMonitoringService (use_mongodb={settings.use_mongodb})")
     monitoring_service = MongoMonitoringService()
 else:
+    print(f"Creating SQLiteMonitoringService (use_mongodb={settings.use_mongodb})")
     monitoring_service = SQLiteMonitoringService()
