@@ -110,6 +110,13 @@ phishguard-mvp/
 └── README.md                 # This file
 ```
 
+## Screenshots 
+
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/4fd32b07-da16-4639-8377-d7a668bf9357" />
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/47b722f5-99c9-463a-bba5-e40767711333" />
+
+
+
 ## 🔌 API Endpoints
 
 ### Core Analysis
