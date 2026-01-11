@@ -15,6 +15,7 @@ from bson import ObjectId
 
 from feature_extractor import FeatureExtractor
 from classifier import HybridClassifier
+from threat_intelligence import threat_intelligence
 
 logger = logging.getLogger(__name__)
 
@@ -161,6 +162,35 @@ class MongoMonitoringService:
                 logger.error(f"Classifier predict() failed: {e}")
                 prediction_result = None
             
+            # Check external threat intelligence (Google Safe Browsing)
+            threat_intel_result = None
+            if threat_intelligence.is_configured():
+                try:
+                    threat_intel_result = await threat_intelligence.check_url(url)
+                    logger.info(f"Threat intelligence result: {threat_intel_result}")
+                    
+                    # If external API flags as threat, override local prediction
+                    if threat_intel_result.get('is_threat', False):
+                        threat_types = threat_intel_result.get('threat_types', [])
+                        threat_descriptions = [threat_intelligence.get_threat_description(t) for t in threat_types]
+                        
+                        if prediction_result:
+                            prediction_result['prediction'] = 'phishing'
+                            prediction_result['threat_level'] = 'HIGH'
+                            prediction_result['confidence_score'] = max(
+                                prediction_result.get('confidence_score', 0.5), 
+                                0.95
+                            )
+                            prediction_result['phishing_probability'] = 1.0
+                            if prediction_result.get('risk_factors') is None:
+                                prediction_result['risk_factors'] = []
+                            prediction_result['risk_factors'].insert(0, f"🚨 Google Safe Browsing: {', '.join(threat_descriptions)}")
+                        
+                        logger.warning(f"🚨 URL flagged by Google Safe Browsing: {url} - {threat_types}")
+                        
+                except Exception as e:
+                    logger.warning(f"Threat intelligence check failed: {e}")
+            
             # Handle case where prediction fails
             if prediction_result is None:
                 logger.warning(f"Prediction failed for {url}, using fallback")
@@ -173,70 +203,17 @@ class MongoMonitoringService:
                     'model_explanation': 'Fallback prediction due to model error'
                 }
             
-            # Save HTML evidence if fetch was successful
-            evidence_path = None
-            screenshot_data_dict = None
-            html_evidence = None
-            
-            if features.get('fetch_success', False):
-                # Store HTML evidence in database
-                try:
-                    from screenshot_capture import get_screenshot_capturer
-                    screenshot_capturer = get_screenshot_capturer()
-                    html_result = screenshot_capturer.capture_html_snapshot(url, str(url_record.id), return_content=True)
-                    if html_result and 'html_content' in html_result:
-                        html_evidence = html_result['html_content']
-                        logger.info(f"HTML evidence captured: {html_result['size']} bytes")
-                except Exception as e:
-                    logger.warning(f"HTML evidence capture failed: {e}")
-            
-            # Capture screenshot for high-risk URLs or if enabled
-            threat_level = prediction_result.get('threat_level', 'LOW')
-            if settings.enable_screenshot and (threat_level in ['HIGH', 'MEDIUM'] or features.get('fetch_success', False)):
-                try:
-                    from screenshot_capture import get_screenshot_capturer
-                    screenshot_capturer = get_screenshot_capturer()
-                    
-                    if hasattr(screenshot_capturer, 'capture_screenshot_async'):
-                        screenshot_data_dict = await screenshot_capturer.capture_screenshot_async(
-                            url, str(url_record.id), save_to_db=True
-                        )
-                    else:
-                        # Fallback to HTML snapshot for lightweight capturer
-                        if not html_evidence:  # Only if we haven't captured HTML already
-                            html_result = screenshot_capturer.capture_html_snapshot(
-                                url, str(url_record.id), return_content=True
-                            )
-                            if html_result and 'html_content' in html_result:
-                                html_evidence = html_result['html_content']
-                        
-                    if screenshot_data_dict and 'data' in screenshot_data_dict:
-                        logger.info(f"Screenshot captured to database: {screenshot_data_dict['size']} bytes")
-                            
-                except Exception as e:
-                    logger.warning(f"Screenshot capture failed for {url}: {e}")
-            
-            # Create enhanced detection record with database evidence storage
+            # Create enhanced detection record
             detection_data = {
                 'url_id': url_record.id,
                 'classification': prediction_result['prediction'],
                 'confidence_score': prediction_result['confidence_score'],
                 'features': features,
-                'evidence_path': evidence_path,  # Keep for backward compatibility
+                'evidence_path': None,
                 'threat_level': prediction_result.get('threat_level', 'UNKNOWN'),
                 'phishing_probability': prediction_result.get('phishing_probability', 0.0),
-                'risk_factors': prediction_result.get('risk_factors', []) or [],  # Handle None case
-                'html_evidence': html_evidence
+                'risk_factors': prediction_result.get('risk_factors', []) or [],
             }
-            
-            # Add screenshot data if captured
-            if screenshot_data_dict and 'data' in screenshot_data_dict:
-                detection_data.update({
-                    'screenshot_data': screenshot_data_dict['data'],
-                    'screenshot_filename': screenshot_data_dict['filename'],
-                    'screenshot_content_type': screenshot_data_dict['content_type'],
-                    'screenshot_size': screenshot_data_dict['size']
-                })
             
             detection = Detection(**detection_data)
             
@@ -252,7 +229,7 @@ class MongoMonitoringService:
                     'phishing_probability': 0.5,
                     'risk_factors': ['Prediction validation failed'],
                     'features': features,
-                    'evidence_path': evidence_path,
+                    'evidence_path': None,
                     'scan_id': str(detection.id),
                     'explanation': 'Fallback response due to prediction error'
                 }
@@ -270,7 +247,7 @@ class MongoMonitoringService:
                 'phishing_probability': prediction_result.get('phishing_probability', 0.5),
                 'risk_factors': risk_factors[:5],  # Top 5 for response
                 'features': features,
-                'evidence_path': evidence_path,
+                'evidence_path': None,
                 'scan_id': str(detection.id),
                 'explanation': prediction_result.get('model_explanation', 'Analysis complete')
             }
@@ -319,56 +296,7 @@ class MongoMonitoringService:
             logger.error(f"Error retraining model: {e}")
 
 
-class SQLiteMonitoringService:
-    """SQLite fallback monitoring service (original implementation)"""
-    
-    def __init__(self):
-        self.scheduler = AsyncIOScheduler()
-        self.feature_extractor = FeatureExtractor()
-        self.classifier = HybridClassifier()
-        self.is_running = False
-        
-        # Enhanced classifier initializes automatically with synthetic data
-        # self.classifier.load_model("phishguard_model.joblib")
-    
-    def start(self):
-        """Start the monitoring scheduler"""
-        if not self.is_running:
-            # For SQLite, we'll use a simplified sync version
-            self.is_running = True
-            logger.info(f"SQLite Monitoring service started (simplified mode)")
-    
-    def stop(self):
-        """Stop the monitoring scheduler"""
-        if self.is_running:
-            self.is_running = False
-            logger.info("SQLite Monitoring service stopped")
-    
-    def submit_url_for_scanning(self, url: str, cse_hint: Optional[str] = None) -> dict:
-        """Submit a URL for immediate scanning (sync version for SQLite)"""
-        logger.info(f"SQLiteMonitoringService.submit_url_for_scanning called for: {url}")
-        # Simplified implementation for demonstration
-        features = self.feature_extractor.extract_features(url, cse_hint)
-        prediction_result = self.classifier.predict(features)
-        
-        return {
-            'classification': prediction_result.get('prediction', 'suspicious'),
-            'confidence_score': prediction_result.get('confidence_score', 0.5),
-            'features': features,
-            'evidence_path': None,
-            'threat_level': prediction_result.get('threat_level', 'MEDIUM'),
-            'explanation': prediction_result.get('model_explanation', 'Analysis complete')
-        }
-    
-    def retrain_model(self):
-        """Retrain model (simplified for SQLite)"""
-        logger.info("SQLite model retraining (simplified)")
+# MongoDB-only monitoring service
+print("Creating MongoMonitoringService")
+monitoring_service = MongoMonitoringService()
 
-
-# Create the appropriate monitoring service based on configuration
-if settings.use_mongodb:
-    print(f"Creating MongoMonitoringService (use_mongodb={settings.use_mongodb})")
-    monitoring_service = MongoMonitoringService()
-else:
-    print(f"Creating SQLiteMonitoringService (use_mongodb={settings.use_mongodb})")
-    monitoring_service = SQLiteMonitoringService()

@@ -15,23 +15,100 @@ logger = logging.getLogger(__name__)
 
 # Trusted domains whitelist - major legitimate websites
 TRUSTED_DOMAINS = {
-    'google.com', 'www.google.com', 'gmail.com', 'youtube.com',
-    'microsoft.com', 'www.microsoft.com', 'office.com', 'outlook.com',
-    'amazon.com', 'www.amazon.com', 'aws.amazon.com',
-    'facebook.com', 'www.facebook.com', 'instagram.com',
+    # Google services
+    'google.com', 'www.google.com', 'gmail.com', 'youtube.com', 'www.youtube.com',
+    'drive.google.com', 'docs.google.com', 'sheets.google.com', 'meet.google.com',
+    'calendar.google.com', 'photos.google.com', 'play.google.com', 'maps.google.com',
+    'accounts.google.com', 'mail.google.com', 'translate.google.com',
+    # Regional Google
+    'google.co.uk', 'google.de', 'google.fr', 'google.in', 'google.co.jp',
+    
+    # Microsoft services
+    'microsoft.com', 'www.microsoft.com', 'office.com', 'outlook.com', 'live.com',
+    'login.microsoftonline.com', 'azure.microsoft.com', 'portal.azure.com',
+    'onedrive.live.com', 'teams.microsoft.com', 'sharepoint.com', 'bing.com',
     'linkedin.com', 'www.linkedin.com',
-    'github.com', 'www.github.com',
+    
+    # Amazon services
+    'amazon.com', 'www.amazon.com', 'aws.amazon.com', 'console.aws.amazon.com',
+    'amazon.co.uk', 'amazon.de', 'amazon.in', 'amazon.co.jp', 'amazon.ca',
+    'primevideo.com', 'smile.amazon.com', 'alexa.amazon.com',
+    
+    # Apple services
+    'apple.com', 'www.apple.com', 'icloud.com', 'appleid.apple.com',
+    'support.apple.com', 'developer.apple.com', 'music.apple.com',
+    
+    # Meta/Facebook services
+    'facebook.com', 'www.facebook.com', 'instagram.com', 'www.instagram.com',
+    'messenger.com', 'whatsapp.com', 'web.whatsapp.com', 'meta.com',
+    
+    # Other major tech
+    'twitter.com', 'x.com', 'github.com', 'www.github.com', 'gist.github.com',
     'stackoverflow.com', 'www.stackoverflow.com', 'stackexchange.com',
-    'wikipedia.org', 'www.wikipedia.org',
-    'twitter.com', 'x.com',
-    'apple.com', 'www.apple.com', 'icloud.com',
-    'yahoo.com', 'www.yahoo.com',
-    'reddit.com', 'www.reddit.com',
+    'reddit.com', 'www.reddit.com', 'old.reddit.com',
+    'wikipedia.org', 'www.wikipedia.org', 'en.wikipedia.org',
+    'yahoo.com', 'www.yahoo.com', 'mail.yahoo.com',
     'netflix.com', 'www.netflix.com',
+    'spotify.com', 'open.spotify.com',
+    'dropbox.com', 'www.dropbox.com',
+    'adobe.com', 'www.adobe.com', 'creativecloud.adobe.com',
+    'zoom.us', 'zoom.com',
+    'slack.com', 'app.slack.com',
+    'discord.com', 'discord.gg',
+    'twitch.tv', 'www.twitch.tv',
+    
+    # Financial services
     'paypal.com', 'www.paypal.com',
     'ebay.com', 'www.ebay.com',
-    'dropbox.com', 'www.dropbox.com',
-    'adobe.com', 'www.adobe.com'
+    'stripe.com', 'dashboard.stripe.com',
+    'chase.com', 'www.chase.com', 'secure.chase.com',
+    'bankofamerica.com', 'www.bankofamerica.com',
+    'wellsfargo.com', 'www.wellsfargo.com',
+    'citibank.com', 'www.citibank.com',
+    'capitalone.com', 'www.capitalone.com',
+    'americanexpress.com', 'www.americanexpress.com',
+    'discover.com', 'www.discover.com',
+    'visa.com', 'www.visa.com',
+    'mastercard.com', 'www.mastercard.com',
+    
+    # Enterprise/Business
+    'salesforce.com', 'www.salesforce.com',
+    'oracle.com', 'www.oracle.com',
+    'ibm.com', 'www.ibm.com',
+    'sap.com', 'www.sap.com',
+    'atlassian.com', 'www.atlassian.com', 'jira.atlassian.com',
+    'hubspot.com', 'www.hubspot.com',
+    
+    # Government & Education
+    'gov.uk', 'irs.gov', 'usa.gov', 'ssa.gov',
+    'edu', 'harvard.edu', 'mit.edu', 'stanford.edu',
+    
+    # Crypto & Finance
+    'coinbase.com', 'www.coinbase.com',
+    'binance.com', 'www.binance.com',
+    'blockchain.com', 'www.blockchain.com',
+    
+    # Shopping
+    'etsy.com', 'www.etsy.com',
+    'walmart.com', 'www.walmart.com',
+    'target.com', 'www.target.com',
+    'bestbuy.com', 'www.bestbuy.com',
+    'homedepot.com', 'www.homedepot.com',
+    
+    # Travel
+    'booking.com', 'www.booking.com',
+    'airbnb.com', 'www.airbnb.com',
+    'expedia.com', 'www.expedia.com',
+    'tripadvisor.com', 'www.tripadvisor.com',
+    
+    # Legitimate Hosting Platforms (user deployments)
+    'vercel.app', 'netlify.app', 'github.io', 'gitlab.io',
+    'pages.dev', 'fly.dev', 'render.com', 'railway.app',
+    'herokuapp.com', 'glitch.me', 'replit.dev',
+    
+    # Video & Media
+    'youtu.be', 'vimeo.com', 'dailymotion.com',
+    'tiktok.com', 'www.tiktok.com',
 }
 
 
@@ -87,111 +164,294 @@ class HybridClassifier:
         """Generate more comprehensive synthetic training examples"""
         synthetic_samples = []
         
-        # High-confidence phishing examples
+        # High-confidence phishing examples - diverse patterns
         phishing_samples = [
+            # Pattern 1: Classic phishing with brand impersonation + urgency
             {
-                # URL features
                 'url_length': 95, 'hostname_length': 32, 'subdomain_count': 4,
                 'has_ip_address': False, 'has_suspicious_tld': True, 'dash_count': 5,
                 'digit_count': 8, 'phishing_keyword_count': 3, 'url_entropy': 4.5,
                 'hostname_entropy': 4.2, 'randomness_score': 0.8, 'brand_impersonation_score': 0.9,
-                
-                # Content features
                 'has_forms': True, 'form_count': 2, 'has_password_input': True,
                 'password_input_count': 2, 'phishing_keyword_density': 0.15,
                 'urgent_keyword_count': 3, 'security_keyword_count': 4,
                 'suspicious_title': 0.8, 'external_links_count': 12,
                 'external_link_ratio': 0.9, 'suspicious_link_count': 6,
-                
-                # Advanced features
                 'has_homograph_chars': True, 'certificate_warnings': True,
                 'countdown_timer_present': True, 'obfuscated_content': True,
                 'spelling_error_indicators': 0.3, 'domain_age_days': 3,
                 'label': 'phishing'
             },
+            # Pattern 2: IP address phishing
             {
-                # Another phishing variant
                 'url_length': 120, 'hostname_length': 45, 'subdomain_count': 5,
                 'has_ip_address': True, 'has_suspicious_tld': False, 'dash_count': 3,
                 'digit_count': 12, 'phishing_keyword_count': 4, 'url_entropy': 4.8,
                 'hostname_entropy': 4.5, 'randomness_score': 0.9, 'brand_impersonation_score': 0.85,
-                
                 'has_forms': True, 'form_count': 1, 'has_password_input': True,
                 'password_input_count': 1, 'phishing_keyword_density': 0.12,
                 'urgent_keyword_count': 2, 'security_keyword_count': 5,
                 'suspicious_title': 0.9, 'external_links_count': 8,
                 'external_link_ratio': 0.8, 'suspicious_link_count': 4,
-                
                 'has_homograph_chars': False, 'certificate_warnings': False,
                 'countdown_timer_present': False, 'obfuscated_content': True,
                 'spelling_error_indicators': 0.2, 'domain_age_days': 1,
                 'label': 'phishing'
-            }
+            },
+            # Pattern 3: Free hosting service abuse (000webhost, etc.)
+            {
+                'url_length': 85, 'hostname_length': 38, 'subdomain_count': 2,
+                'has_ip_address': False, 'has_suspicious_tld': False, 'dash_count': 4,
+                'digit_count': 6, 'phishing_keyword_count': 2, 'url_entropy': 4.2,
+                'hostname_entropy': 4.0, 'randomness_score': 0.7, 'brand_impersonation_score': 0.8,
+                'has_forms': True, 'form_count': 1, 'has_password_input': True,
+                'password_input_count': 1, 'phishing_keyword_density': 0.10,
+                'urgent_keyword_count': 2, 'security_keyword_count': 3,
+                'suspicious_title': 0.7, 'external_links_count': 5,
+                'external_link_ratio': 0.6, 'suspicious_link_count': 3,
+                'has_homograph_chars': False, 'certificate_warnings': False,
+                'countdown_timer_present': True, 'obfuscated_content': False,
+                'spelling_error_indicators': 0.25, 'domain_age_days': 7,
+                'label': 'phishing'
+            },
+            # Pattern 4: Typosquatting attack (g00gle, amaz0n style)
+            {
+                'url_length': 45, 'hostname_length': 18, 'subdomain_count': 1,
+                'has_ip_address': False, 'has_suspicious_tld': False, 'dash_count': 1,
+                'digit_count': 2, 'phishing_keyword_count': 1, 'url_entropy': 3.5,
+                'hostname_entropy': 3.2, 'randomness_score': 0.3, 'brand_impersonation_score': 0.95,
+                'has_forms': True, 'form_count': 1, 'has_password_input': True,
+                'password_input_count': 1, 'phishing_keyword_density': 0.08,
+                'urgent_keyword_count': 1, 'security_keyword_count': 2,
+                'suspicious_title': 0.6, 'external_links_count': 3,
+                'external_link_ratio': 0.4, 'suspicious_link_count': 2,
+                'has_homograph_chars': False, 'certificate_warnings': False,
+                'countdown_timer_present': False, 'obfuscated_content': False,
+                'spelling_error_indicators': 0.1, 'domain_age_days': 14,
+                'label': 'phishing'
+            },
+            # Pattern 5: ngrok/tunnel service abuse
+            {
+                'url_length': 75, 'hostname_length': 35, 'subdomain_count': 2,
+                'has_ip_address': False, 'has_suspicious_tld': False, 'dash_count': 2,
+                'digit_count': 10, 'phishing_keyword_count': 2, 'url_entropy': 4.6,
+                'hostname_entropy': 4.3, 'randomness_score': 0.85, 'brand_impersonation_score': 0.7,
+                'has_forms': True, 'form_count': 1, 'has_password_input': True,
+                'password_input_count': 1, 'phishing_keyword_density': 0.09,
+                'urgent_keyword_count': 1, 'security_keyword_count': 2,
+                'suspicious_title': 0.5, 'external_links_count': 4,
+                'external_link_ratio': 0.5, 'suspicious_link_count': 2,
+                'has_homograph_chars': False, 'certificate_warnings': False,
+                'countdown_timer_present': False, 'obfuscated_content': True,
+                'spelling_error_indicators': 0.15, 'domain_age_days': 0,
+                'label': 'phishing'
+            },
+            # Pattern 6: Banking/PayPal impersonation
+            {
+                'url_length': 110, 'hostname_length': 42, 'subdomain_count': 4,
+                'has_ip_address': False, 'has_suspicious_tld': True, 'dash_count': 6,
+                'digit_count': 5, 'phishing_keyword_count': 5, 'url_entropy': 4.4,
+                'hostname_entropy': 4.1, 'randomness_score': 0.6, 'brand_impersonation_score': 0.92,
+                'has_forms': True, 'form_count': 2, 'has_password_input': True,
+                'password_input_count': 2, 'phishing_keyword_density': 0.18,
+                'urgent_keyword_count': 4, 'security_keyword_count': 6,
+                'suspicious_title': 0.85, 'external_links_count': 6,
+                'external_link_ratio': 0.7, 'suspicious_link_count': 4,
+                'has_homograph_chars': False, 'certificate_warnings': True,
+                'countdown_timer_present': True, 'obfuscated_content': False,
+                'spelling_error_indicators': 0.2, 'domain_age_days': 5,
+                'label': 'phishing'
+            },
+            # Pattern 7: Cryptocurrency scam pattern
+            {
+                'url_length': 88, 'hostname_length': 30, 'subdomain_count': 3,
+                'has_ip_address': False, 'has_suspicious_tld': True, 'dash_count': 3,
+                'digit_count': 7, 'phishing_keyword_count': 3, 'url_entropy': 4.3,
+                'hostname_entropy': 4.0, 'randomness_score': 0.75, 'brand_impersonation_score': 0.85,
+                'has_forms': True, 'form_count': 1, 'has_password_input': True,
+                'password_input_count': 1, 'phishing_keyword_density': 0.12,
+                'urgent_keyword_count': 3, 'security_keyword_count': 3,
+                'suspicious_title': 0.7, 'external_links_count': 8,
+                'external_link_ratio': 0.75, 'suspicious_link_count': 5,
+                'has_homograph_chars': True, 'certificate_warnings': False,
+                'countdown_timer_present': True, 'obfuscated_content': True,
+                'spelling_error_indicators': 0.18, 'domain_age_days': 2,
+                'label': 'phishing'
+            },
+            # Pattern 8: Social media account phishing
+            {
+                'url_length': 72, 'hostname_length': 28, 'subdomain_count': 3,
+                'has_ip_address': False, 'has_suspicious_tld': False, 'dash_count': 4,
+                'digit_count': 4, 'phishing_keyword_count': 2, 'url_entropy': 4.0,
+                'hostname_entropy': 3.8, 'randomness_score': 0.55, 'brand_impersonation_score': 0.88,
+                'has_forms': True, 'form_count': 1, 'has_password_input': True,
+                'password_input_count': 1, 'phishing_keyword_density': 0.07,
+                'urgent_keyword_count': 2, 'security_keyword_count': 2,
+                'suspicious_title': 0.65, 'external_links_count': 4,
+                'external_link_ratio': 0.5, 'suspicious_link_count': 2,
+                'has_homograph_chars': False, 'certificate_warnings': False,
+                'countdown_timer_present': False, 'obfuscated_content': False,
+                'spelling_error_indicators': 0.12, 'domain_age_days': 10,
+                'label': 'phishing'
+            },
         ]
         
-        # Suspicious examples (medium confidence)
+        # Suspicious examples (medium confidence) - more variety
         suspicious_samples = [
+            # Pattern 1: Moderately suspicious URL
             {
                 'url_length': 65, 'hostname_length': 25, 'subdomain_count': 2,
                 'has_ip_address': False, 'has_suspicious_tld': True, 'dash_count': 2,
                 'digit_count': 4, 'phishing_keyword_count': 1, 'url_entropy': 3.8,
                 'hostname_entropy': 3.5, 'randomness_score': 0.4, 'brand_impersonation_score': 0.6,
-                
                 'has_forms': True, 'form_count': 1, 'has_password_input': True,
                 'password_input_count': 1, 'phishing_keyword_density': 0.05,
                 'urgent_keyword_count': 1, 'security_keyword_count': 2,
                 'suspicious_title': 0.4, 'external_links_count': 5,
                 'external_link_ratio': 0.5, 'suspicious_link_count': 1,
-                
                 'has_homograph_chars': False, 'certificate_warnings': False,
                 'countdown_timer_present': False, 'obfuscated_content': False,
                 'spelling_error_indicators': 0.1, 'domain_age_days': 30,
                 'label': 'suspicious'
-            }
+            },
+            # Pattern 2: New domain with some red flags
+            {
+                'url_length': 55, 'hostname_length': 20, 'subdomain_count': 1,
+                'has_ip_address': False, 'has_suspicious_tld': False, 'dash_count': 2,
+                'digit_count': 3, 'phishing_keyword_count': 1, 'url_entropy': 3.5,
+                'hostname_entropy': 3.2, 'randomness_score': 0.35, 'brand_impersonation_score': 0.4,
+                'has_forms': True, 'form_count': 1, 'has_password_input': True,
+                'password_input_count': 1, 'phishing_keyword_density': 0.04,
+                'urgent_keyword_count': 1, 'security_keyword_count': 1,
+                'suspicious_title': 0.3, 'external_links_count': 4,
+                'external_link_ratio': 0.45, 'suspicious_link_count': 1,
+                'has_homograph_chars': False, 'certificate_warnings': False,
+                'countdown_timer_present': False, 'obfuscated_content': False,
+                'spelling_error_indicators': 0.08, 'domain_age_days': 45,
+                'label': 'suspicious'
+            },
+            # Pattern 3: Borderline case with urgency language
+            {
+                'url_length': 58, 'hostname_length': 22, 'subdomain_count': 1,
+                'has_ip_address': False, 'has_suspicious_tld': False, 'dash_count': 1,
+                'digit_count': 2, 'phishing_keyword_count': 2, 'url_entropy': 3.4,
+                'hostname_entropy': 3.1, 'randomness_score': 0.25, 'brand_impersonation_score': 0.3,
+                'has_forms': True, 'form_count': 1, 'has_password_input': False,
+                'password_input_count': 0, 'phishing_keyword_density': 0.06,
+                'urgent_keyword_count': 2, 'security_keyword_count': 1,
+                'suspicious_title': 0.35, 'external_links_count': 6,
+                'external_link_ratio': 0.55, 'suspicious_link_count': 2,
+                'has_homograph_chars': False, 'certificate_warnings': False,
+                'countdown_timer_present': False, 'obfuscated_content': False,
+                'spelling_error_indicators': 0.05, 'domain_age_days': 60,
+                'label': 'suspicious'
+            },
         ]
         
-        # Benign examples
+        # Benign examples - more diversity for better precision
         benign_samples = [
+            # Pattern 1: Standard corporate site
             {
                 'url_length': 35, 'hostname_length': 15, 'subdomain_count': 1,
                 'has_ip_address': False, 'has_suspicious_tld': False, 'dash_count': 0,
                 'digit_count': 0, 'phishing_keyword_count': 0, 'url_entropy': 2.8,
                 'hostname_entropy': 2.5, 'randomness_score': 0.1, 'brand_impersonation_score': 0.0,
-                
                 'has_forms': True, 'form_count': 1, 'has_password_input': True,
                 'password_input_count': 1, 'phishing_keyword_density': 0.01,
                 'urgent_keyword_count': 0, 'security_keyword_count': 1,
                 'suspicious_title': 0.0, 'external_links_count': 2,
                 'external_link_ratio': 0.2, 'suspicious_link_count': 0,
-                
                 'has_homograph_chars': False, 'certificate_warnings': False,
                 'countdown_timer_present': False, 'obfuscated_content': False,
                 'spelling_error_indicators': 0.0, 'domain_age_days': 1095,
                 'label': 'benign'
             },
+            # Pattern 2: Simple blog/content site
             {
                 'url_length': 28, 'hostname_length': 12, 'subdomain_count': 0,
                 'has_ip_address': False, 'has_suspicious_tld': False, 'dash_count': 0,
                 'digit_count': 0, 'phishing_keyword_count': 0, 'url_entropy': 2.5,
                 'hostname_entropy': 2.2, 'randomness_score': 0.05, 'brand_impersonation_score': 0.0,
-                
                 'has_forms': False, 'form_count': 0, 'has_password_input': False,
                 'password_input_count': 0, 'phishing_keyword_density': 0.0,
                 'urgent_keyword_count': 0, 'security_keyword_count': 0,
                 'suspicious_title': 0.0, 'external_links_count': 3,
                 'external_link_ratio': 0.3, 'suspicious_link_count': 0,
-                
                 'has_homograph_chars': False, 'certificate_warnings': False,
                 'countdown_timer_present': False, 'obfuscated_content': False,
                 'spelling_error_indicators': 0.0, 'domain_age_days': 2190,
                 'label': 'benign'
-            }
+            },
+            # Pattern 3: E-commerce legitimate site
+            {
+                'url_length': 50, 'hostname_length': 18, 'subdomain_count': 1,
+                'has_ip_address': False, 'has_suspicious_tld': False, 'dash_count': 1,
+                'digit_count': 0, 'phishing_keyword_count': 0, 'url_entropy': 3.0,
+                'hostname_entropy': 2.7, 'randomness_score': 0.12, 'brand_impersonation_score': 0.0,
+                'has_forms': True, 'form_count': 2, 'has_password_input': True,
+                'password_input_count': 1, 'phishing_keyword_density': 0.02,
+                'urgent_keyword_count': 0, 'security_keyword_count': 2,
+                'suspicious_title': 0.0, 'external_links_count': 5,
+                'external_link_ratio': 0.25, 'suspicious_link_count': 0,
+                'has_homograph_chars': False, 'certificate_warnings': False,
+                'countdown_timer_present': False, 'obfuscated_content': False,
+                'spelling_error_indicators': 0.0, 'domain_age_days': 1825,
+                'label': 'benign'
+            },
+            # Pattern 4: Banking legitimate site with login
+            {
+                'url_length': 42, 'hostname_length': 16, 'subdomain_count': 1,
+                'has_ip_address': False, 'has_suspicious_tld': False, 'dash_count': 0,
+                'digit_count': 0, 'phishing_keyword_count': 1, 'url_entropy': 2.9,
+                'hostname_entropy': 2.6, 'randomness_score': 0.08, 'brand_impersonation_score': 0.0,
+                'has_forms': True, 'form_count': 1, 'has_password_input': True,
+                'password_input_count': 1, 'phishing_keyword_density': 0.03,
+                'urgent_keyword_count': 0, 'security_keyword_count': 3,
+                'suspicious_title': 0.1, 'external_links_count': 4,
+                'external_link_ratio': 0.2, 'suspicious_link_count': 0,
+                'has_homograph_chars': False, 'certificate_warnings': False,
+                'countdown_timer_present': False, 'obfuscated_content': False,
+                'spelling_error_indicators': 0.0, 'domain_age_days': 3650,
+                'label': 'benign'
+            },
+            # Pattern 5: Tech company with subdomain
+            {
+                'url_length': 55, 'hostname_length': 22, 'subdomain_count': 2,
+                'has_ip_address': False, 'has_suspicious_tld': False, 'dash_count': 1,
+                'digit_count': 0, 'phishing_keyword_count': 0, 'url_entropy': 3.1,
+                'hostname_entropy': 2.8, 'randomness_score': 0.1, 'brand_impersonation_score': 0.0,
+                'has_forms': True, 'form_count': 1, 'has_password_input': True,
+                'password_input_count': 1, 'phishing_keyword_density': 0.01,
+                'urgent_keyword_count': 0, 'security_keyword_count': 1,
+                'suspicious_title': 0.0, 'external_links_count': 8,
+                'external_link_ratio': 0.35, 'suspicious_link_count': 0,
+                'has_homograph_chars': False, 'certificate_warnings': False,
+                'countdown_timer_present': False, 'obfuscated_content': False,
+                'spelling_error_indicators': 0.0, 'domain_age_days': 2555,
+                'label': 'benign'
+            },
+            # Pattern 6: Government/educational site
+            {
+                'url_length': 40, 'hostname_length': 14, 'subdomain_count': 1,
+                'has_ip_address': False, 'has_suspicious_tld': False, 'dash_count': 0,
+                'digit_count': 0, 'phishing_keyword_count': 0, 'url_entropy': 2.6,
+                'hostname_entropy': 2.3, 'randomness_score': 0.05, 'brand_impersonation_score': 0.0,
+                'has_forms': True, 'form_count': 1, 'has_password_input': False,
+                'password_input_count': 0, 'phishing_keyword_density': 0.0,
+                'urgent_keyword_count': 0, 'security_keyword_count': 0,
+                'suspicious_title': 0.0, 'external_links_count': 10,
+                'external_link_ratio': 0.4, 'suspicious_link_count': 0,
+                'has_homograph_chars': False, 'certificate_warnings': False,
+                'countdown_timer_present': False, 'obfuscated_content': False,
+                'spelling_error_indicators': 0.0, 'domain_age_days': 5475,
+                'label': 'benign'
+            },
         ]
         
-        # Replicate samples to create more training data
-        synthetic_samples.extend(phishing_samples * 3)
-        synthetic_samples.extend(suspicious_samples * 2)
-        synthetic_samples.extend(benign_samples * 4)
+        # Create balanced training dataset with more samples
+        synthetic_samples.extend(phishing_samples * 4)  # 32 phishing samples
+        synthetic_samples.extend(suspicious_samples * 5)  # 15 suspicious samples
+        synthetic_samples.extend(benign_samples * 6)  # 36 benign samples
         
         return synthetic_samples
     
@@ -313,7 +573,7 @@ class HybridClassifier:
         return np.array(final_predictions), confidence_scores
     
     def _is_trusted_domain(self, url: str) -> bool:
-        """Check if domain is in trusted whitelist"""
+        """Check if domain is in trusted whitelist or is a subdomain of trusted platform"""
         try:
             parsed = urlparse(url)
             domain = parsed.netloc.lower()
@@ -321,8 +581,30 @@ class HybridClassifier:
             # Remove port if present
             if ':' in domain:
                 domain = domain.split(':')[0]
-                
-            return domain in TRUSTED_DOMAINS
+            
+            # Check exact match first
+            if domain in TRUSTED_DOMAINS:
+                return True
+            
+            # Check if it's a subdomain of a trusted platform
+            # This handles cases like myapp.vercel.app, user.github.io, etc.
+            hosting_platforms = [
+                'vercel.app', 'netlify.app', 'github.io', 'gitlab.io',
+                'pages.dev', 'fly.dev', 'render.com', 'railway.app',
+                'herokuapp.com', 'glitch.me', 'replit.dev', 'web.app',
+                'firebaseapp.com', 'azurewebsites.net', 'cloudfront.net'
+            ]
+            
+            for platform in hosting_platforms:
+                if domain.endswith('.' + platform) or domain == platform:
+                    return True
+            
+            # Check if subdomain of major trusted domains (e.g., docs.google.com)
+            for trusted in TRUSTED_DOMAINS:
+                if domain.endswith('.' + trusted):
+                    return True
+                    
+            return False
         except Exception:
             return False
 
@@ -438,10 +720,26 @@ class HybridClassifier:
                 # Enhanced: Hosted infrastructure patterns
                 features.get('is_hosted_infrastructure', False) and features.get('hosted_service_type') in ['ngrok', 'tunnel_service', 'free_hosting'],
                 features.get('has_suspicious_tld', False),
-                features.get('randomness_score', 0) > 0.8
+                features.get('randomness_score', 0) > 0.8,
+                # NEW: Malware detection patterns
+                features.get('has_suspicious_file_extension', False),
+                features.get('has_short_random_path', False),
+                features.get('has_uncommon_tld', False),
+                features.get('http_without_https', False) and features.get('has_suspicious_file_extension', False),  # HTTP + download = very suspicious
             ]
             
-            if sum(suspicious_patterns) >= 2 and threat_level == 'LOW':
+            # CRITICAL: Immediate phishing classification for dangerous combinations
+            # HTTP + suspicious file extension = likely malware download
+            if features.get('http_without_https', False) and features.get('has_suspicious_file_extension', False):
+                prediction_label = 'phishing'
+                threat_level = 'HIGH'
+                risk_factors.append('HTTP download with suspicious file extension (likely malware)')
+            # Short random path + suspicious extension = malware
+            elif features.get('has_short_random_path', False) and features.get('has_suspicious_file_extension', False):
+                prediction_label = 'phishing'
+                threat_level = 'HIGH'
+                risk_factors.append('Random URL path with executable file (likely malware distribution)')
+            elif sum(suspicious_patterns) >= 2 and threat_level == 'LOW':
                 prediction_label = 'suspicious' 
                 threat_level = 'MEDIUM'
             elif sum(suspicious_patterns) >= 3:

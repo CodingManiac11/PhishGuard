@@ -25,21 +25,49 @@ class FeatureExtractor:
         
         # Enhanced phishing indicators
         self.phishing_keywords = [
-            'verify', 'update', 'suspend', 'secure', 'account', 'login', 'signin',
+            # Account/Authentication
+            'verify', 'update', 'suspend', 'secure', 'account', 'login', 'signin', 'sign-in',
+            'password', 'credential', 'authenticate', 'authorization', 'unlock',
+            # Brands (commonly impersonated)
             'bank', 'paypal', 'amazon', 'microsoft', 'apple', 'google', 'facebook',
+            'netflix', 'linkedin', 'instagram', 'twitter', 'ebay', 'chase', 'wellsfargo',
+            'coinbase', 'binance', 'blockchain', 'wallet', 'crypto',
+            # Urgency/Fear tactics
             'urgent', 'immediate', 'confirm', 'validate', 'activate', 'locked',
-            'expired', 'limited', 'restricted', 'alert', 'warning', 'security'
+            'expired', 'limited', 'restricted', 'alert', 'warning', 'security',
+            'suspended', 'disabled', 'unusual', 'unauthorized', 'compromised',
+            # Action words
+            'click', 'action', 'required', 'verify-now', 'act-now', 'expire',
+            # Financial
+            'payment', 'invoice', 'refund', 'billing', 'transaction', 'wire', 'transfer'
         ]
         
         self.legitimate_domains = [
-            'google.com', 'microsoft.com', 'apple.com', 'amazon.com', 'paypal.com',
-            'facebook.com', 'twitter.com', 'linkedin.com', 'github.com', 'stackoverflow.com'
+            # Tech giants
+            'google.com', 'microsoft.com', 'apple.com', 'amazon.com', 'meta.com',
+            'facebook.com', 'twitter.com', 'linkedin.com', 'github.com', 'stackoverflow.com',
+            'youtube.com', 'instagram.com', 'whatsapp.com', 'netflix.com', 'spotify.com',
+            # Financial
+            'paypal.com', 'chase.com', 'bankofamerica.com', 'wellsfargo.com', 'citibank.com',
+            'capitalone.com', 'americanexpress.com', 'discover.com', 'visa.com', 'mastercard.com',
+            'stripe.com', 'square.com',
+            # Crypto
+            'coinbase.com', 'binance.com', 'blockchain.com', 'kraken.com',
+            # E-commerce
+            'ebay.com', 'etsy.com', 'walmart.com', 'target.com', 'bestbuy.com',
+            'alibaba.com', 'aliexpress.com', 'shopify.com',
+            # Cloud/Enterprise
+            'salesforce.com', 'oracle.com', 'ibm.com', 'adobe.com', 'dropbox.com',
+            'slack.com', 'zoom.us', 'atlassian.com', 'hubspot.com',
+            # Other
+            'reddit.com', 'pinterest.com', 'tumblr.com', 'discord.com', 'twitch.tv'
         ]
         
         self.suspicious_tlds = [
             '.tk', '.ml', '.ga', '.cf', '.gq', '.pw', '.top', '.click', '.download',
             '.stream', '.science', '.racing', '.win', '.bid', '.loan', '.date',
-            '.review', '.country', '.kim', '.cricket', '.work', '.party', '.gdn'
+            '.review', '.country', '.kim', '.cricket', '.work', '.party', '.gdn',
+            '.xyz', '.online', '.site', '.club', '.icu', '.buzz', '.live', '.rest'
         ]
         
         # Hosted infrastructure patterns (ngrok, tunneling services, etc.)
@@ -176,6 +204,36 @@ class FeatureExtractor:
             'digit_count': sum(c.isdigit() for c in hostname),
             'special_char_count': len(re.findall(r'[^a-zA-Z0-9.-]', hostname)),
             
+            # NEW: Double extension detection (e.g., .com.tk, .org.ml)
+            'has_double_extension': self._detect_double_extension(hostname),
+            
+            # NEW: Brand name in subdomain (suspicious pattern)
+            'brand_in_subdomain': self._detect_brand_in_subdomain(hostname),
+            
+            # NEW: Consonant ratio (random strings have abnormal ratios)
+            'consonant_ratio': self._calculate_consonant_ratio(hostname),
+            
+            # NEW: URL encoding detection
+            'url_encoded_chars_count': len(re.findall(r'%[0-9A-Fa-f]{2}', url)),
+            
+            # NEW: Typosquatting pattern detection
+            'typosquatting_score': self._detect_typosquatting(hostname),
+            
+            # NEW: Repeated character sequences
+            'has_repeated_chars': bool(re.search(r'(.)\1{3,}', hostname)),
+            
+            # NEW: Suspicious file extension in path (malware detection)
+            'has_suspicious_file_extension': self._detect_suspicious_file_extension(path),
+            
+            # NEW: HTTP only (no HTTPS) - higher risk for downloads
+            'http_without_https': parsed.scheme == 'http',
+            
+            # NEW: Short random path (common in malware URLs like /aTu.lim)
+            'has_short_random_path': self._detect_short_random_path(path),
+            
+            # NEW: Unknown/uncommon TLD
+            'has_uncommon_tld': self._detect_uncommon_tld(hostname),
+            
             # Advanced suspicious patterns
             'has_homograph_chars': self._detect_homograph_chars(hostname),
             'punycode_domain': hostname.startswith('xn--'),
@@ -187,6 +245,9 @@ class FeatureExtractor:
             # Keyword analysis
             'phishing_keyword_count': self._count_phishing_keywords(url.lower()),
             'brand_impersonation_score': self._calculate_brand_impersonation(hostname),
+            
+            # NEW: Brand in path detection
+            'brand_in_path': self._detect_brand_in_path(path),
             
             # Entropy and randomness
             'url_entropy': self._calculate_entropy(url),
@@ -205,6 +266,171 @@ class FeatureExtractor:
         }
         
         return features
+    
+    def _detect_double_extension(self, hostname: str) -> bool:
+        """Detect domains with double extensions like .com.tk"""
+        common_tlds = ['.com', '.org', '.net', '.edu', '.gov', '.co']
+        suspicious_tlds = ['.tk', '.ml', '.ga', '.cf', '.gq', '.xyz', '.top', '.pw']
+        
+        for common in common_tlds:
+            for suspicious in suspicious_tlds:
+                if common + suspicious in hostname:
+                    return True
+        return False
+    
+    def _detect_brand_in_subdomain(self, hostname: str) -> bool:
+        """Detect brand names appearing in subdomains (not as main domain)"""
+        parts = hostname.lower().split('.')
+        if len(parts) < 3:
+            return False
+        
+        # Check subdomains (all parts except the last two which are domain.tld)
+        subdomains = parts[:-2]
+        subdomain_text = '.'.join(subdomains)
+        
+        for domain in self.legitimate_domains:
+            brand = domain.split('.')[0]
+            if brand in subdomain_text:
+                return True
+        return False
+    
+    def _calculate_consonant_ratio(self, text: str) -> float:
+        """Calculate consonant ratio - random strings often have abnormal ratios"""
+        if not text or len(text) < 3:
+            return 0.5
+        
+        text_lower = text.lower()
+        consonants = set('bcdfghjklmnpqrstvwxyz')
+        letters = [c for c in text_lower if c.isalpha()]
+        
+        if not letters:
+            return 0.5
+            
+        consonant_count = sum(1 for c in letters if c in consonants)
+        return consonant_count / len(letters)
+    
+    def _detect_typosquatting(self, hostname: str) -> float:
+        """Detect common typosquatting patterns"""
+        hostname_lower = hostname.lower()
+        max_score = 0.0
+        
+        # Common character substitutions used in typosquatting
+        substitutions = {
+            'o': ['0', 'ο'],  # o -> zero, Greek omicron
+            'i': ['1', 'l', '!'],
+            'l': ['1', 'i', '|'],
+            'a': ['@', '4', 'а'],  # a -> @, 4, Cyrillic a
+            'e': ['3', 'е'],  # e -> 3, Cyrillic e
+            's': ['5', '$'],
+            'g': ['9', '6'],
+        }
+        
+        for domain in self.legitimate_domains:
+            brand = domain.split('.')[0].lower()
+            
+            # Check if hostname contains modified version of brand
+            for char, subs in substitutions.items():
+                for sub in subs:
+                    typo_variant = brand.replace(char, sub)
+                    if typo_variant in hostname_lower and typo_variant != brand:
+                        max_score = max(max_score, 0.9)
+            
+            # Check for missing/extra characters (simple heuristic)
+            if len(brand) >= 4:
+                # Missing character
+                for i in range(len(brand)):
+                    truncated = brand[:i] + brand[i+1:]
+                    if len(truncated) >= 3 and truncated in hostname_lower:
+                        max_score = max(max_score, 0.7)
+                
+                # Swapped adjacent characters
+                for i in range(len(brand) - 1):
+                    swapped = brand[:i] + brand[i+1] + brand[i] + brand[i+2:]
+                    if swapped in hostname_lower and swapped != brand:
+                        max_score = max(max_score, 0.8)
+        
+        return max_score
+    
+    def _detect_brand_in_path(self, path: str) -> bool:
+        """Detect brand names in URL path (phishing often puts brand in path)"""
+        path_lower = path.lower()
+        
+        for domain in self.legitimate_domains:
+            brand = domain.split('.')[0]
+            if brand in path_lower:
+                return True
+        return False
+    
+    def _detect_suspicious_file_extension(self, path: str) -> bool:
+        """Detect suspicious/executable file extensions commonly used in malware"""
+        suspicious_extensions = [
+            # Executables
+            '.exe', '.msi', '.bat', '.cmd', '.com', '.scr', '.pif',
+            # Scripts
+            '.vbs', '.vbe', '.js', '.jse', '.ws', '.wsf', '.wsc', '.wsh',
+            '.ps1', '.psm1', '.psd1',
+            # Documents with macros
+            '.docm', '.xlsm', '.pptm', '.dotm',
+            # Archives (often used to hide malware)
+            '.zip', '.rar', '.7z', '.tar', '.gz',
+            # Other suspicious
+            '.dll', '.sys', '.drv', '.ocx',
+            '.lim', '.bin', '.dat', '.tmp',  # Uncommon extensions like in the malware URL
+            '.apk', '.ipa',  # Mobile apps
+        ]
+        
+        path_lower = path.lower()
+        for ext in suspicious_extensions:
+            if path_lower.endswith(ext):
+                return True
+        return False
+    
+    def _detect_short_random_path(self, path: str) -> bool:
+        """Detect short random-looking paths common in malware URLs like /aTu.lim"""
+        if not path or path == '/':
+            return False
+        
+        # Get the last segment of the path
+        segments = [s for s in path.split('/') if s]
+        if not segments:
+            return False
+        
+        last_segment = segments[-1]
+        
+        # Check if it's a short segment with mixed case (suspicious pattern)
+        if len(last_segment) <= 10 and len(last_segment) >= 3:
+            # Check for mixed case which is unusual in normal URLs
+            has_upper = any(c.isupper() for c in last_segment)
+            has_lower = any(c.islower() for c in last_segment)
+            
+            if has_upper and has_lower:
+                # Check if it doesn't look like a normal word
+                # (has unusual character distribution)
+                vowels = sum(1 for c in last_segment.lower() if c in 'aeiou')
+                if vowels <= 1:  # Very few vowels = likely random
+                    return True
+        
+        return False
+    
+    def _detect_uncommon_tld(self, hostname: str) -> bool:
+        """Detect uncommon/suspicious TLDs often used in malware distribution"""
+        uncommon_tlds = [
+            # Very uncommon/cheap TLDs
+            '.xyz', '.top', '.click', '.link', '.work', '.date',
+            '.racing', '.download', '.stream', '.gdn', '.men',
+            '.loan', '.win', '.bid', '.trade', '.webcam', '.party',
+            '.science', '.review', '.cricket', '.accountant',
+            # Free TLDs often abused
+            '.tk', '.ml', '.ga', '.cf', '.gq',
+            # Less trusted
+            '.pw', '.cc', '.ws', '.su', '.biz',
+        ]
+        
+        hostname_lower = hostname.lower()
+        for tld in uncommon_tlds:
+            if hostname_lower.endswith(tld):
+                return True
+        return False
         
     def _detect_homograph_chars(self, text: str) -> bool:
         """Detect Unicode homograph characters that could be used for spoofing"""

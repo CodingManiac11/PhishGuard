@@ -14,14 +14,10 @@ warnings.filterwarnings('ignore', category=RuntimeWarning)
 
 from config import settings
 
-# Import both database systems
-if settings.use_mongodb:
-    from mongo_database import connect_to_mongo, close_mongo_connection
-    from mongo_models import URLRecord, Detection, Label
-    from bson import ObjectId
-else:
-    from database import get_db, engine, Base
-    from models import URLRecord, Detection, Label
+# MongoDB imports only
+from mongo_database import connect_to_mongo, close_mongo_connection
+from mongo_models import URLRecord, Detection, Label
+from bson import ObjectId
 
 from schemas import (
     URLSubmission, DetectionResponse, LabelSubmission, 
@@ -43,33 +39,20 @@ app = FastAPI(
 # Mount static files (frontend)
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
-# Database initialization
-if settings.use_mongodb:
-    @app.on_event("startup")
-    async def startup_event():
-        success = await connect_to_mongo()
-        if success:
-            logger.info("🚀 Starting with MongoDB Atlas")
-            monitoring_service.start()
-        else:
-            logger.error("❌ Failed to connect to MongoDB Atlas")
-    
-    @app.on_event("shutdown")
-    async def shutdown_event():
-        await close_mongo_connection()
-        monitoring_service.stop()
-else:
-    # Create SQLite tables for fallback
-    Base.metadata.create_all(bind=engine)
-    
-    @app.on_event("startup")
-    async def startup_event():
-        logger.info("🚀 Starting with SQLite fallback")
+# Database initialization - MongoDB only
+@app.on_event("startup")
+async def startup_event():
+    success = await connect_to_mongo()
+    if success:
+        logger.info("🚀 Starting with MongoDB Atlas")
         monitoring_service.start()
+    else:
+        logger.error("❌ Failed to connect to MongoDB Atlas")
 
-    @app.on_event("shutdown")
-    async def shutdown_event():
-        monitoring_service.stop()
+@app.on_event("shutdown")
+async def shutdown_event():
+    await close_mongo_connection()
+    monitoring_service.stop()
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -114,10 +97,7 @@ async def get_alerts(
 ):
     """Get recent phishing alerts"""
     try:
-        if settings.use_mongodb:
-            return await get_alerts_mongodb(limit, classification)
-        else:
-            return await get_alerts_sqlite(limit, classification)
+        return await get_alerts_mongodb(limit, classification)
             
     except Exception as e:
         logger.error(f"Error retrieving alerts: {e}")
@@ -168,10 +148,7 @@ async def get_alerts_sqlite(limit: int, classification: Optional[str]) -> AlertR
 async def add_label(label_submission: LabelSubmission):
     """Add a truth label for model training"""
     try:
-        if settings.use_mongodb:
-            return await add_label_mongodb(label_submission)
-        else:
-            return await add_label_sqlite(label_submission)
+        return await add_label_mongodb(label_submission)
             
     except Exception as e:
         logger.error(f"Error adding label: {e}")
@@ -225,10 +202,7 @@ async def add_label_sqlite(label_submission: LabelSubmission) -> LabelResponse:
 async def get_labels():
     """Get all truth labels"""
     try:
-        if settings.use_mongodb:
-            return await get_labels_mongodb()
-        else:
-            return await get_labels_sqlite()
+        return await get_labels_mongodb()
             
     except Exception as e:
         logger.error(f"Error retrieving labels: {e}")
@@ -260,22 +234,19 @@ async def get_labels_sqlite() -> List[LabelResponse]:
 async def get_urls():
     """Get all monitored URLs"""
     try:
-        if settings.use_mongodb:
-            urls = await URLRecord.find().sort([("last_scanned", -1)]).to_list()
-            
-            return [
-                {
-                    "id": str(url.id),
-                    "url": url.url,
-                    "cse_hint": url.cse_hint,
-                    "first_seen": url.first_seen,
-                    "last_scanned": url.last_scanned,
-                    "scan_count": url.scan_count
-                }
-                for url in urls
-            ]
-        else:
-            return []
+        urls = await URLRecord.find().sort([("last_scanned", -1)]).to_list()
+        
+        return [
+            {
+                "id": str(url.id),
+                "url": url.url,
+                "cse_hint": url.cse_hint,
+                "first_seen": url.first_seen,
+                "last_scanned": url.last_scanned,
+                "scan_count": url.scan_count
+            }
+            for url in urls
+        ]
             
     except Exception as e:
         logger.error(f"Error retrieving URLs: {e}")
@@ -286,35 +257,26 @@ async def get_urls():
 async def get_stats():
     """Get system statistics"""
     try:
-        if settings.use_mongodb:
-            total_urls = await URLRecord.count()
-            total_detections = await Detection.count()
-            total_labels = await Label.count()
-            
-            # Get unique URL counts by getting the latest detection for each URL
-            detections = await Detection.find().to_list()
-            
-            # Group detections by URL and get the latest one for each
-            url_latest_detections = {}
-            for detection in detections:
-                url_id = detection.url_id
-                if url_id not in url_latest_detections:
-                    url_latest_detections[url_id] = detection
-                elif detection.detection_time > url_latest_detections[url_id].detection_time:
-                    url_latest_detections[url_id] = detection
-            
-            # Count unique classifications
-            phishing_count = sum(1 for d in url_latest_detections.values() if d.classification == "phishing")
-            suspected_count = sum(1 for d in url_latest_detections.values() if d.classification == "suspicious")
-            benign_count = sum(1 for d in url_latest_detections.values() if d.classification == "benign")
-        else:
-            # SQLite fallback
-            total_urls = 0
-            total_detections = 0
-            total_labels = 0
-            phishing_count = 0
-            suspected_count = 0
-            benign_count = 0
+        total_urls = await URLRecord.count()
+        total_detections = await Detection.count()
+        total_labels = await Label.count()
+        
+        # Get unique URL counts by getting the latest detection for each URL
+        detections = await Detection.find().to_list()
+        
+        # Group detections by URL and get the latest one for each
+        url_latest_detections = {}
+        for detection in detections:
+            url_id = detection.url_id
+            if url_id not in url_latest_detections:
+                url_latest_detections[url_id] = detection
+            elif detection.detection_time > url_latest_detections[url_id].detection_time:
+                url_latest_detections[url_id] = detection
+        
+        # Count unique classifications
+        phishing_count = sum(1 for d in url_latest_detections.values() if d.classification == "phishing")
+        suspected_count = sum(1 for d in url_latest_detections.values() if d.classification == "suspicious")
+        benign_count = sum(1 for d in url_latest_detections.values() if d.classification == "benign")
         
         return {
             "total_urls": total_urls,
@@ -324,7 +286,7 @@ async def get_stats():
             "suspicious_count": suspected_count,
             "benign_count": benign_count,
             "monitoring_active": monitoring_service.is_running,
-            "database_type": "MongoDB Atlas" if settings.use_mongodb else "SQLite"
+            "database_type": "MongoDB Atlas"
         }
         
     except Exception as e:
@@ -348,7 +310,7 @@ async def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "database": "MongoDB Atlas" if settings.use_mongodb else "SQLite",
+        "database": "MongoDB Atlas",
         "timestamp": datetime.utcnow().isoformat()
     }
 
