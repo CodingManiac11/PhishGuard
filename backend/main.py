@@ -61,10 +61,14 @@ async def shutdown_event():
 async def read_index():
     """Serve the main dashboard"""
     try:
-        with open("frontend/index.html", "r", encoding="utf-8") as f:
-            return HTMLResponse(f.read())
-    except FileNotFoundError:
-        return HTMLResponse("<h1>Dashboard not found</h1>", status_code=404)
+        index_path = os.path.join(os.path.dirname(__file__), "frontend", "index.html")
+        if os.path.exists(index_path):
+            with open(index_path, "r", encoding="utf-8") as f:
+                return HTMLResponse(f.read())
+        return HTMLResponse("<html><body><h1>PhishGuard API</h1><p>API is running. Visit <a href='/docs'>/docs</a> for API documentation.</p></body></html>")
+    except Exception as e:
+        logger.error(f"Error serving index: {e}")
+        return HTMLResponse("<html><body><h1>PhishGuard API</h1><p>Visit <a href='/docs'>/docs</a> for API documentation.</p></body></html>")
 
 
 @app.post("/submit", response_model=ScanResult)
