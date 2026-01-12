@@ -137,12 +137,6 @@ async def get_alerts_mongodb(limit: int, classification: Optional[str]) -> Alert
     )
 
 
-async def get_alerts_sqlite(limit: int, classification: Optional[str]) -> AlertResponse:
-    """Get alerts from SQLite (fallback)"""
-    # This would use the original SQLAlchemy code
-    # For now, return empty response
-    return AlertResponse(detections=[], total_count=0)
-
 
 @app.post("/labels", response_model=LabelResponse)
 async def add_label(label_submission: LabelSubmission):
@@ -192,11 +186,6 @@ async def add_label_mongodb(label_submission: LabelSubmission) -> LabelResponse:
     )
 
 
-async def add_label_sqlite(label_submission: LabelSubmission) -> LabelResponse:
-    """Add label to SQLite (fallback)"""
-    # Original SQLAlchemy implementation would go here
-    raise HTTPException(status_code=501, detail="SQLite labeling not implemented in this version")
-
 
 @app.get("/labels", response_model=List[LabelResponse])
 async def get_labels():
@@ -224,10 +213,6 @@ async def get_labels_mongodb() -> List[LabelResponse]:
         for label in labels
     ]
 
-
-async def get_labels_sqlite() -> List[LabelResponse]:
-    """Get labels from SQLite (fallback)"""
-    return []
 
 
 @app.get("/urls")

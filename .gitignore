@@ -66,7 +66,6 @@ venv.bak/
 .env.local
 .env.production
 .env.staging
-*.env
 
 # IDE
 .vscode/
