@@ -16,11 +16,7 @@ An advanced AI-powered phishing and malware detection system that uses machine l
 - **166 Trusted Domains**: Zero false positives on legitimate sites
 - **📁 Local JSON Storage**: No external database required
 
-## Screenshots
 
-<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/e28de7a4-6e2c-40da-8224-24646d65e662" />
-
-<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/2e644890-f6e4-4e34-8d92-3c0932ef43e9" />
 
 ## 🚀 Quick Start
 
