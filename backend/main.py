@@ -62,13 +62,17 @@ async def read_index():
     """Serve the main dashboard"""
     try:
         index_path = os.path.join(os.path.dirname(__file__), "frontend", "index.html")
+        logger.info(f"Looking for index.html at: {index_path}")
+        logger.info(f"File exists: {os.path.exists(index_path)}")
+        logger.info(f"Directory contents: {os.listdir(os.path.dirname(__file__))}")
+        
         if os.path.exists(index_path):
             with open(index_path, "r", encoding="utf-8") as f:
                 return HTMLResponse(f.read())
-        return HTMLResponse("<html><body><h1>PhishGuard API</h1><p>API is running. Visit <a href='/docs'>/docs</a> for API documentation.</p></body></html>")
+        return HTMLResponse(f"<html><body><h1>PhishGuard API</h1><p>Frontend not found at: {index_path}</p><p>Visit <a href='/docs'>/docs</a> for API documentation.</p></body></html>")
     except Exception as e:
         logger.error(f"Error serving index: {e}")
-        return HTMLResponse("<html><body><h1>PhishGuard API</h1><p>Visit <a href='/docs'>/docs</a> for API documentation.</p></body></html>")
+        return HTMLResponse(f"<html><body><h1>PhishGuard API</h1><p>Error: {e}</p><p>Visit <a href='/docs'>/docs</a> for API documentation.</p></body></html>")
 
 
 @app.post("/submit", response_model=ScanResult)
