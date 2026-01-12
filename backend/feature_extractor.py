@@ -2,6 +2,7 @@ import requests
 import json
 import re
 import math
+import os
 from urllib.parse import urlparse, parse_qs
 from bs4 import BeautifulSoup
 from typing import Dict, Any, Optional, List
@@ -134,8 +135,11 @@ class FeatureExtractor:
     def _load_cse_domains(self) -> List[str]:
         """Load CSE domain list from sample data"""
         try:
-            with open('sample_data/cse_list.json', 'r') as f:
-                return json.load(f)
+            cse_path = os.path.join(os.path.dirname(__file__), 'sample_data', 'cse_list.json')
+            if os.path.exists(cse_path):
+                with open(cse_path, 'r') as f:
+                    return json.load(f)
+            return []
         except Exception as e:
             logger.warning(f"Could not load CSE list: {e}")
             return []

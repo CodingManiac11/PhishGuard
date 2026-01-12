@@ -36,8 +36,10 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# Mount static files (frontend)
-app.mount("/static", StaticFiles(directory="frontend"), name="static")
+# Mount static files (frontend) - use absolute path
+frontend_dir = os.path.join(os.path.dirname(__file__), "frontend")
+if os.path.exists(frontend_dir):
+    app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
 
 # Database initialization - MongoDB only
 @app.on_event("startup")
