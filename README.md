@@ -1,19 +1,20 @@
 # 🛡️ PhishGuard - AI-Powered Phishing Detection System
 
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.116.1-green)](https://fastapi.tiangolo.com)
-[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green)](https://mongodb.com)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.109.0-green)](https://fastapi.tiangolo.com)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-An advanced AI-powered phishing and malware detection system that uses machine learning and **Google Safe Browsing API** to analyze URLs and protect users from threats.
+An advanced AI-powered phishing and malware detection system that uses machine learning to analyze URLs and protect users from threats.
 
 ## 🎯 Key Features
 
-- **Hybrid ML Detection**: Ensemble model (RandomForest + GradientBoosting + LogisticRegression)
-- **Google Safe Browsing API**: Real-time threat checking against Google's database
+- **🤖 Hybrid ML Detection**: Ensemble model (RandomForest + GradientBoosting + LogisticRegression)
+- **⚖️ Compare Scans**: Side-by-side PhishGuard ML + VirusTotal analysis
+- **🔐 SSL Certificate Analysis**: Certificate validation and security checks
+- **📧 Email Header Analysis**: SPF/DKIM/DMARC spoofing detection
 - **50+ URL Features**: URL structure, typosquatting, brand impersonation, malware patterns
 - **166 Trusted Domains**: Zero false positives on legitimate sites
-- **Malware Detection**: Suspicious file extensions, HTTP downloads, random URL patterns
+- **📁 Local JSON Storage**: No external database required
 
 ## Screenshots
 
@@ -21,15 +22,10 @@ An advanced AI-powered phishing and malware detection system that uses machine l
 
 <img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/2e644890-f6e4-4e34-8d92-3c0932ef43e9" />
 
-<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/892bc006-a83f-4a74-884f-0982e43c39c3" />
-
-<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/9fcf8b99-ffbd-4ac4-837c-5703e9bb0e1c" />
-
 ## 🚀 Quick Start
 
 ### Prerequisites
 - Python 3.8+
-- MongoDB Atlas account (free tier available)
 
 ### Installation
 
@@ -44,15 +40,11 @@ pip install -r requirements.txt
 
 ### Configuration
 
-Create a `.env` file in root directory:
+Create a `.env` file in root directory (optional):
 
 ```env
-# MongoDB Atlas (Required)
-MONGO_CONNECTION_STRING=mongodb+srv://username:password@cluster.mongodb.net/
-MONGO_DATABASE_NAME=phishguard
-
-# Google Safe Browsing API (Recommended)
-PHISHGUARD_GOOGLE_SAFE_BROWSING_API_KEY=your_api_key
+# VirusTotal API (optional - for Compare Scans feature)
+PHISHGUARD_VIRUSTOTAL_API_KEY=your_api_key_here
 ```
 
 ### Run the Server
@@ -71,15 +63,15 @@ phishguard-mvp/
 ├── backend/
 │   ├── main.py                 # FastAPI server
 │   ├── classifier.py           # ML classification engine
-│   ├── feature_extractor.py    # URL feature extraction
-│   ├── threat_intelligence.py  # Google Safe Browsing API
-│   ├── mongo_monitor.py        # URL scanning service
-│   ├── mongo_database.py       # MongoDB operations
-│   ├── mongo_models.py         # Data models
+│   ├── feature_extractor.py    # URL feature extraction (50+ features)
+│   ├── json_storage.py         # Local JSON file storage
+│   ├── virustotal.py           # VirusTotal API integration
+│   ├── ssl_analyzer.py         # SSL certificate analysis
+│   ├── email_analyzer.py       # Email header analysis
 │   ├── config.py               # Configuration
-│   └── schemas.py              # API schemas
-├── frontend/                   # Web interface
-├── .env                        # Environment config
+│   ├── schemas.py              # API schemas
+│   ├── data/                   # JSON storage directory
+│   └── frontend/               # Web interface
 ├── requirements.txt            # Dependencies
 ├── Procfile                    # Railway deployment
 └── README.md
@@ -90,6 +82,9 @@ phishguard-mvp/
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/submit` | Analyze URL for threats |
+| POST | `/scan/virustotal` | VirusTotal scan |
+| POST | `/scan/ssl` | SSL certificate analysis |
+| POST | `/scan/email` | Email header analysis |
 | GET | `/stats` | System statistics |
 | GET | `/alerts` | Recent threat detections |
 | GET | `/` | Web interface |
@@ -119,10 +114,10 @@ phishguard-mvp/
 - Brand name in path detection
 - Double extension detection (.com.tk)
 
-### External Threat Intelligence
-- **Google Safe Browsing API** integration
-- Real-time malware/phishing database lookup
-- Automatic threat override for known threats
+### Security Analysis
+- **SSL Certificate**: Validity, expiration, issuer verification
+- **Email Headers**: SPF, DKIM, DMARC authentication checks
+- **VirusTotal**: 70+ antivirus engine checks
 
 ## 📊 Classification Results
 
@@ -139,20 +134,17 @@ phishguard-mvp/
 Edit `backend/config.py`:
 
 ```python
-mongodb_url: str              # MongoDB connection string
-database_name: str            # Database name
 enable_whois: bool = True     # WHOIS lookups
 enable_dns: bool = True       # DNS lookups
-google_safe_browsing_api_key  # Google API key
+virustotal_api_key: str       # VirusTotal API key
 ```
 
 ## 🚀 Deployment (Railway)
 
 1. Push code to GitHub
 2. Connect Railway to your GitHub repo
-3. Add environment variables:
-   - `MONGO_CONNECTION_STRING`
-   - `PHISHGUARD_GOOGLE_SAFE_BROWSING_API_KEY`
+3. Add environment variables (optional):
+   - `PHISHGUARD_VIRUSTOTAL_API_KEY`
 4. Deploy automatically
 
 ## 📝 License

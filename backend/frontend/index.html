@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PhishGuard MVP - Cyber Security Dashboard</title>
+    <title>PhishGuard - Advanced Cyber Security Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -13,6 +13,8 @@
                         'cyber-blue': '#00d9ff',
                         'cyber-dark': '#0a0a0b',
                         'cyber-gray': '#1a1a1b',
+                        'cyber-purple': '#8b5cf6',
+                        'cyber-green': '#10b981',
                     }
                 }
             }
@@ -31,20 +33,32 @@
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
+        .tab-active {
+            background: linear-gradient(135deg, #00d9ff20, #8b5cf620);
+            border-bottom: 2px solid #00d9ff;
+        }
+        .pulse-glow {
+            animation: pulse-glow 2s infinite;
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 5px rgba(0, 217, 255, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(0, 217, 255, 0.8); }
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-cyber-dark via-gray-900 to-cyber-dark text-white min-h-screen">
     <header class="border-b border-cyber-blue border-opacity-30">
         <div class="container mx-auto px-6 py-4">
             <div class="flex justify-between items-center">
-                <h1 class="text-3xl font-bold cyber-text-glow">PhishGuard </h1>
+                <h1 class="text-3xl font-bold cyber-text-glow">🛡️ PhishGuard</h1>
                 <div class="flex items-center space-x-4">
                     <div id="status-indicator" class="flex items-center">
                         <div class="w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></div>
                         <span class="text-sm">System Active</span>
                     </div>
-                    <button onclick="refreshData()" class="bg-cyber-blue text-black px-4 py-2 rounded hover:bg-opacity-80 transition">
-                        Refresh
+                    <button id="refresh-btn" onclick="refreshData()" class="bg-cyber-blue text-black px-4 py-2 rounded hover:bg-opacity-80 transition flex items-center gap-2">
+                        <span id="refresh-icon">🔄</span>
+                        <span id="refresh-text">Refresh</span>
                     </button>
                 </div>
             </div>
@@ -72,185 +86,520 @@
             </div>
         </div>
         
-        <!-- URL Scanner -->
-        <div class="bg-cyber-gray p-6 rounded-lg cyber-glow mb-8">
-            <h2 class="text-xl font-bold mb-4 cyber-text-glow">Scan URL</h2>
-            <form id="url-form" class="space-y-4">
-                <div>
-                    <label for="url-input" class="block text-sm font-medium mb-2">URL to Scan</label>
-                    <input type="url" id="url-input" name="url" required 
-                           class="w-full px-4 py-2 bg-cyber-dark border border-cyber-blue rounded focus:outline-none focus:ring-2 focus:ring-cyber-blue text-white" 
-                           placeholder="https://example.com/login">
-                </div>
-                <div>
-                    <label for="cse-hint" class="block text-sm font-medium mb-2">CSE Hint (Optional)</label>
-                    <input type="text" id="cse-hint" name="cse_hint" 
-                           class="w-full px-4 py-2 bg-cyber-dark border border-cyber-blue rounded focus:outline-none focus:ring-2 focus:ring-cyber-blue text-white" 
-                           placeholder="e.g., National Power Grid, Amazon, PayPal">
-                </div>
-                <button type="submit" 
-                        class="bg-cyber-blue text-black px-6 py-2 rounded hover:bg-opacity-80 transition font-medium">
-                    Scan URL
+        <!-- Scan Tabs -->
+        <div class="bg-cyber-gray rounded-lg cyber-glow mb-8">
+            <div class="flex border-b border-gray-700 overflow-x-auto">
+                <button onclick="showTab('url')" id="tab-url" class="px-6 py-3 text-sm font-medium tab-active whitespace-nowrap">
+                    🔗 URL Scan
                 </button>
-            </form>
+                <button onclick="showTab('compare')" id="tab-compare" class="px-6 py-3 text-sm font-medium hover:bg-gray-800 whitespace-nowrap">
+                    ⚖️ Compare Scans
+                </button>
+                <button onclick="showTab('ssl')" id="tab-ssl" class="px-6 py-3 text-sm font-medium hover:bg-gray-800 whitespace-nowrap">
+                    🔐 SSL Check
+                </button>
+                <button onclick="showTab('email')" id="tab-email" class="px-6 py-3 text-sm font-medium hover:bg-gray-800 whitespace-nowrap">
+                    📧 Email Headers
+                </button>
+            </div>
             
-            <!-- Results Section -->
-            <div id="scan-result" class="hidden mt-6 p-4 rounded border-l-4">
-                <h3 class="font-bold mb-2">Scan Result</h3>
-                <div id="scan-details"></div>
+            <!-- URL Scan Tab -->
+            <div id="panel-url" class="p-6">
+                <h2 class="text-xl font-bold mb-4 cyber-text-glow">Scan URL for Phishing</h2>
+                <form id="url-form" class="space-y-4">
+                    <div>
+                        <label for="url-input" class="block text-sm font-medium mb-2">URL to Scan</label>
+                        <input type="url" id="url-input" name="url" required 
+                               class="w-full px-4 py-2 bg-cyber-dark border border-cyber-blue rounded focus:outline-none focus:ring-2 focus:ring-cyber-blue text-white" 
+                               placeholder="https://example.com/login">
+                    </div>
+                    <div>
+                        <label for="cse-hint" class="block text-sm font-medium mb-2">CSE Hint (Optional)</label>
+                        <input type="text" id="cse-hint" name="cse_hint" 
+                               class="w-full px-4 py-2 bg-cyber-dark border border-cyber-blue rounded focus:outline-none focus:ring-2 focus:ring-cyber-blue text-white" 
+                               placeholder="e.g., National Power Grid, Amazon, PayPal">
+                    </div>
+                    <button type="submit" class="bg-cyber-blue text-black px-6 py-2 rounded hover:bg-opacity-80 transition font-medium">
+                        Scan URL
+                    </button>
+                </form>
+                <div id="url-result" class="hidden mt-6 p-4 rounded border-l-4"></div>
+            </div>
+            
+            <!-- Compare Scans Tab -->
+            <div id="panel-compare" class="p-6 hidden">
+                <h2 class="text-xl font-bold mb-4 cyber-text-glow">⚖️ Compare URL Scan vs VirusTotal</h2>
+                <p class="text-gray-400 mb-4">Run both scans simultaneously and see combined analysis</p>
+                <form id="compare-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">URL to Compare</label>
+                        <input type="url" id="compare-url" required 
+                               class="w-full px-4 py-2 bg-cyber-dark border border-cyan-400 rounded focus:outline-none focus:ring-2 focus:ring-cyan-400 text-white" 
+                               placeholder="https://suspicious-site.com">
+                    </div>
+                    <button type="submit" id="compare-btn" class="bg-gradient-to-r from-cyber-blue to-cyber-purple text-white px-6 py-2 rounded hover:opacity-80 transition font-medium">
+                        🔍 Run Both Scans
+                    </button>
+                </form>
+                <div id="compare-status" class="hidden mt-4 p-3 bg-gray-800 rounded text-center">
+                    <span id="compare-timer" class="text-cyber-blue font-mono">Scanning...</span>
+                </div>
+                <div id="compare-result" class="hidden mt-6 space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div id="compare-phishguard" class="p-4 rounded border-l-4 border-cyber-blue bg-gray-800/50">
+                            <h4 class="font-bold mb-2">🔗 PhishGuard ML</h4>
+                            <div id="compare-pg-result"></div>
+                        </div>
+                        <div id="compare-virustotal" class="p-4 rounded border-l-4 border-cyber-purple bg-gray-800/50">
+                            <h4 class="font-bold mb-2">🦠 VirusTotal</h4>
+                            <div id="compare-vt-result"></div>
+                        </div>
+                    </div>
+                    <div id="compare-verdict" class="p-4 rounded border-2"></div>
+                </div>
+            </div>
+            
+            <!-- SSL Check Tab -->
+            <div id="panel-ssl" class="p-6 hidden">
+                <h2 class="text-xl font-bold mb-4 cyber-text-glow">🔐 SSL Certificate Check</h2>
+                <p class="text-gray-400 mb-4">Verify SSL certificate security for any website</p>
+                <form id="ssl-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Website URL</label>
+                        <input type="url" id="ssl-url" required 
+                               class="w-full px-4 py-2 bg-cyber-dark border border-cyber-green rounded focus:outline-none focus:ring-2 focus:ring-cyber-green text-white" 
+                               placeholder="https://example.com">
+                    </div>
+                    <button type="submit" class="bg-cyber-green text-white px-6 py-2 rounded hover:bg-opacity-80 transition font-medium">
+                        Analyze SSL
+                    </button>
+                </form>
+                <div id="ssl-result" class="hidden mt-6 p-4 rounded border-l-4"></div>
+            </div>
+            
+            <!-- Email Headers Tab -->
+            <div id="panel-email" class="p-6 hidden">
+                <h2 class="text-xl font-bold mb-4 cyber-text-glow">📧 Email Header Analysis</h2>
+                <p class="text-gray-400 mb-4">Paste email headers to detect spoofing and phishing</p>
+                <form id="email-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Email Headers</label>
+                        <textarea id="email-headers" rows="8" required 
+                                  class="w-full px-4 py-2 bg-cyber-dark border border-orange-500 rounded focus:outline-none focus:ring-2 focus:ring-orange-500 text-white font-mono text-sm" 
+                                  placeholder="Paste email headers here...
+From: sender@example.com
+Reply-To: reply@example.com
+Received: from mail.example.com..."></textarea>
+                    </div>
+                    <button type="submit" class="bg-orange-500 text-white px-6 py-2 rounded hover:bg-opacity-80 transition font-medium">
+                        Analyze Headers
+                    </button>
+                </form>
+                <div id="email-result" class="hidden mt-6 p-4 rounded border-l-4"></div>
             </div>
         </div>
     </div>
 
     <script>
+        // Tab switching
+        function showTab(tabName) {
+            const tabs = ['url', 'compare', 'ssl', 'email'];
+            tabs.forEach(tab => {
+                document.getElementById(`panel-${tab}`).classList.add('hidden');
+                document.getElementById(`tab-${tab}`).classList.remove('tab-active');
+            });
+            document.getElementById(`panel-${tabName}`).classList.remove('hidden');
+            document.getElementById(`tab-${tabName}`).classList.add('tab-active');
+        }
+
+        // URL Scan Form
         document.getElementById('url-form').addEventListener('submit', async (event) => {
             event.preventDefault();
-            
             const formData = new FormData(event.target);
-            const urlData = { 
-                url: formData.get('url'), 
-                cse_hint: formData.get('cse_hint') || null 
-            };
+            const urlData = { url: formData.get('url'), cse_hint: formData.get('cse_hint') || null };
             
-            const submitButton = event.target.querySelector('button[type="submit"]');
-            const originalText = submitButton.textContent;
-            
-            // Show loading state
-            submitButton.textContent = 'Scanning...';
-            submitButton.disabled = true;
+            const btn = event.target.querySelector('button[type="submit"]');
+            btn.textContent = 'Scanning...';
+            btn.disabled = true;
             
             try {
                 const response = await fetch('/submit', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(urlData)
                 });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
                 const result = await response.json();
-                showScanResult(result);
-                event.target.reset();
-                
-                // Refresh stats after successful scan
+                showUrlResult(result);
                 fetchStats();
-                
             } catch (error) {
-                console.error('Error submitting URL:', error);
-                showError('Failed to scan URL. Please try again.');
+                showResult('url', { error: 'Failed to scan URL' }, true);
             } finally {
-                // Reset button state
-                submitButton.textContent = originalText;
-                submitButton.disabled = false;
+                btn.textContent = 'Scan URL';
+                btn.disabled = false;
             }
         });
 
-        function showScanResult(result) {
-            const resultDiv = document.getElementById('scan-result');
-            const detailsDiv = document.getElementById('scan-details');
+        // Compare Form - Run both scans
+        document.getElementById('compare-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const url = document.getElementById('compare-url').value;
             
-            const confidencePercent = Math.round(result.confidence_score * 100);
-            const phishingPercent = Math.round(result.phishing_probability * 100);
+            const btn = document.getElementById('compare-btn');
+            const statusDiv = document.getElementById('compare-status');
+            const timerSpan = document.getElementById('compare-timer');
+            const resultDiv = document.getElementById('compare-result');
             
-            // Determine threat level styling
-            let threatClass = '';
-            let threatColor = '';
+            btn.disabled = true;
+            btn.textContent = '⏳ Running...';
+            statusDiv.classList.remove('hidden');
+            resultDiv.classList.add('hidden');
             
-            if (result.threat_level === 'HIGH') {
-                threatClass = 'border-red-500 bg-red-900 bg-opacity-20';
-                threatColor = 'bg-red-600 text-white';
-            } else if (result.threat_level === 'MEDIUM') {
-                threatClass = 'border-yellow-500 bg-yellow-900 bg-opacity-20';
-                threatColor = 'bg-yellow-600 text-black';
+            // Start countdown timer
+            let seconds = 0;
+            const timer = setInterval(() => {
+                seconds++;
+                timerSpan.textContent = `⏱️ Running both scans... ${seconds}s elapsed`;
+            }, 1000);
+            
+            try {
+                // Run both scans in parallel
+                const [pgResponse, vtResponse] = await Promise.all([
+                    fetch('/submit', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url, cse_hint: null })
+                    }),
+                    fetch('/scan/virustotal', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url })
+                    })
+                ]);
+                
+                const pgResult = await pgResponse.json();
+                const vtResult = await vtResponse.json();
+                
+                showCompareResult(pgResult, vtResult, url);
+                fetchStats();
+                
+            } catch (error) {
+                document.getElementById('compare-verdict').innerHTML = `
+                    <p class="text-red-400">❌ Error running comparison: ${error.message}</p>
+                `;
+                resultDiv.classList.remove('hidden');
+            } finally {
+                clearInterval(timer);
+                statusDiv.classList.add('hidden');
+                btn.disabled = false;
+                btn.textContent = '🔍 Run Both Scans';
+            }
+        });
+
+        // SSL Form with countdown timer
+        document.getElementById('ssl-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const url = document.getElementById('ssl-url').value;
+            
+            const btn = event.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            
+            // Start countdown
+            let seconds = 0;
+            const timer = setInterval(() => {
+                seconds++;
+                btn.textContent = `⏳ Analyzing... ${seconds}s (max 20s)`;
+            }, 1000);
+            
+            try {
+                const response = await fetch('/scan/ssl', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                const result = await response.json();
+                showSSLResult(result);
+            } catch (error) {
+                showResult('ssl', { error: 'SSL check failed - please try again' }, true);
+            } finally {
+                clearInterval(timer);
+                btn.textContent = 'Analyze SSL';
+                btn.disabled = false;
+            }
+        });
+
+        // Email Form
+        document.getElementById('email-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const headers = document.getElementById('email-headers').value;
+            
+            const btn = event.target.querySelector('button[type="submit"]');
+            btn.textContent = 'Analyzing...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/scan/email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ headers })
+                });
+                const result = await response.json();
+                showEmailResult(result);
+            } catch (error) {
+                showResult('email', { error: 'Email analysis failed' }, true);
+            } finally {
+                btn.textContent = 'Analyze Headers';
+                btn.disabled = false;
+            }
+        });
+
+        // Helper function to convert file to base64
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        // Result display functions
+        function showUrlResult(result) {
+            const div = document.getElementById('url-result');
+            const threatClass = result.threat_level === 'HIGH' ? 'border-red-500 bg-red-900/20' :
+                               result.threat_level === 'MEDIUM' ? 'border-yellow-500 bg-yellow-900/20' :
+                               'border-green-500 bg-green-900/20';
+            
+            const phishProb = result.phishing_probability !== undefined ? 
+                              Math.round(result.phishing_probability * 100) : null;
+            
+            div.innerHTML = `
+                <h3 class="font-bold mb-2">Scan Result</h3>
+                <div class="flex items-center space-x-4 mb-2">
+                    <span class="px-3 py-1 rounded font-semibold ${result.classification === 'phishing' ? 'bg-red-600' : result.classification === 'suspicious' ? 'bg-yellow-600 text-black' : 'bg-green-600'}">${result.classification.toUpperCase()}</span>
+                    <span>Confidence: ${Math.round(result.confidence_score * 100)}%</span>
+                </div>
+                <p><strong>Threat Level:</strong> ${result.threat_level}</p>
+                ${phishProb !== null ? `<p><strong>Phishing Probability:</strong> ${phishProb}%</p>` : ''}
+                ${result.explanation ? `<p class="mt-2"><strong>Explanation:</strong> ${result.explanation}</p>` : ''}
+                ${result.scan_id ? `<p class="text-gray-400 text-sm mt-2"><strong>Scan ID:</strong> ${result.scan_id}</p>` : ''}
+            `;
+            div.className = `mt-6 p-4 rounded border-l-4 ${threatClass}`;
+            div.classList.remove('hidden');
+        }
+
+        function showVTResult(result) {
+            const div = document.getElementById('vt-result');
+            const isClean = !result.is_threat;
+            
+            div.innerHTML = `
+                <h3 class="font-bold mb-2">VirusTotal Result</h3>
+                ${result.error ? `<p class="text-red-400">${result.error}</p>` : `
+                    <div class="flex items-center space-x-4 mb-2">
+                        <span class="px-3 py-1 rounded font-semibold ${isClean ? 'bg-green-600' : 'bg-red-600'}">${isClean ? 'CLEAN' : 'THREAT DETECTED'}</span>
+                        ${result.detection_rate ? `<span>Detection: ${result.detection_rate}</span>` : ''}
+                    </div>
+                    ${result.stats ? `
+                        <p>Malicious: ${result.stats.malicious || 0} | Suspicious: ${result.stats.suspicious || 0} | Clean: ${result.stats.harmless || 0}</p>
+                    ` : ''}
+                    ${result.summary ? `<p class="mt-2">${result.summary}</p>` : ''}
+                `}
+            `;
+            div.className = `mt-6 p-4 rounded border-l-4 ${isClean ? 'border-green-500 bg-green-900/20' : 'border-red-500 bg-red-900/20'}`;
+            div.classList.remove('hidden');
+        }
+
+        function showSSLResult(result) {
+            const div = document.getElementById('ssl-result');
+            const isSecure = result.is_secure;
+            
+            div.innerHTML = `
+                <h3 class="font-bold mb-2">SSL Certificate Analysis</h3>
+                ${result.error ? `<p class="text-red-400">${result.error}</p>` : `
+                    <div class="flex items-center space-x-4 mb-2">
+                        <span class="px-3 py-1 rounded font-semibold ${isSecure ? 'bg-green-600' : 'bg-red-600'}">${isSecure ? 'SECURE' : 'INSECURE'}</span>
+                        <span>Risk: ${result.risk_level}</span>
+                    </div>
+                    ${result.certificate ? `
+                        <p><strong>Issuer:</strong> ${result.certificate.issuer}</p>
+                        <p><strong>Expires:</strong> ${result.certificate.days_until_expiry > 0 ? `in ${result.certificate.days_until_expiry} days` : 'EXPIRED'}</p>
+                    ` : ''}
+                    ${result.issues && result.issues.length > 0 ? `<p class="text-red-400 mt-2">Issues: ${result.issues.join(', ')}</p>` : ''}
+                    ${result.summary ? `<p class="mt-2">${result.summary}</p>` : ''}
+                `}
+            `;
+            div.className = `mt-6 p-4 rounded border-l-4 ${isSecure ? 'border-green-500 bg-green-900/20' : 'border-red-500 bg-red-900/20'}`;
+            div.classList.remove('hidden');
+        }
+
+        function showQRResult(result) {
+            const div = document.getElementById('qr-result');
+            
+            div.innerHTML = `
+                <h3 class="font-bold mb-2">QR Code Scan Result</h3>
+                ${result.error ? `<p class="text-red-400">${result.error}</p>` : `
+                    ${result.found ? `
+                        <p class="mb-2">Found ${result.count} QR code(s)</p>
+                        ${result.urls && result.urls.length > 0 ? `
+                            <p><strong>URLs Found:</strong></p>
+                            <ul class="list-disc list-inside mt-2">
+                                ${result.urls.map(url => `<li class="text-cyber-blue">${url}</li>`).join('')}
+                            </ul>
+                        ` : '<p>No URLs found in QR code</p>'}
+                    ` : '<p>No QR code found in image</p>'}
+                `}
+            `;
+            div.className = `mt-6 p-4 rounded border-l-4 ${result.found ? 'border-cyber-blue bg-blue-900/20' : 'border-gray-500 bg-gray-900/20'}`;
+            div.classList.remove('hidden');
+        }
+
+        function showEmailResult(result) {
+            const div = document.getElementById('email-result');
+            const isSafe = !result.is_suspicious;
+            
+            div.innerHTML = `
+                <h3 class="font-bold mb-2">Email Header Analysis</h3>
+                ${result.error ? `<p class="text-red-400">${result.error}</p>` : `
+                    <div class="flex items-center space-x-4 mb-2">
+                        <span class="px-3 py-1 rounded font-semibold ${isSafe ? 'bg-green-600' : 'bg-red-600'}">${isSafe ? 'LEGITIMATE' : 'SUSPICIOUS'}</span>
+                        <span>Risk: ${result.risk_level}</span>
+                    </div>
+                    ${result.sender ? `<p><strong>From:</strong> ${result.sender.email}</p>` : ''}
+                    ${result.authentication ? `
+                        <p><strong>SPF:</strong> ${result.authentication.spf || 'N/A'} | <strong>DKIM:</strong> ${result.authentication.dkim || 'N/A'}</p>
+                    ` : ''}
+                    ${result.issues && result.issues.length > 0 ? `<p class="text-red-400 mt-2">Issues: ${result.issues.join(', ')}</p>` : ''}
+                    ${result.summary ? `<p class="mt-2">${result.summary}</p>` : ''}
+                `}
+            `;
+            div.className = `mt-6 p-4 rounded border-l-4 ${isSafe ? 'border-green-500 bg-green-900/20' : 'border-red-500 bg-red-900/20'}`;
+            div.classList.remove('hidden');
+        }
+
+        function showResult(type, result, isError) {
+            const div = document.getElementById(`${type}-result`);
+            div.innerHTML = `<p class="text-red-400">${result.error || 'An error occurred'}</p>`;
+            div.className = 'mt-6 p-4 rounded border-l-4 border-red-500 bg-red-900/20';
+            div.classList.remove('hidden');
+        }
+
+        // Compare results display
+        function showCompareResult(pgResult, vtResult, url) {
+            const resultDiv = document.getElementById('compare-result');
+            const pgDiv = document.getElementById('compare-pg-result');
+            const vtDiv = document.getElementById('compare-vt-result');
+            const verdictDiv = document.getElementById('compare-verdict');
+            
+            // PhishGuard result
+            const pgThreat = pgResult.classification === 'phishing' || pgResult.threat_level === 'HIGH';
+            const pgSuspicious = pgResult.classification === 'suspicious' || pgResult.threat_level === 'MEDIUM';
+            pgDiv.innerHTML = `
+                <span class="px-2 py-1 rounded text-sm font-bold ${pgThreat ? 'bg-red-600' : pgSuspicious ? 'bg-yellow-600 text-black' : 'bg-green-600'}">
+                    ${pgResult.classification?.toUpperCase() || 'UNKNOWN'}
+                </span>
+                <p class="mt-2 text-sm">Confidence: ${Math.round((pgResult.confidence_score || 0) * 100)}%</p>
+                <p class="text-sm text-gray-400">Threat Level: ${pgResult.threat_level || 'N/A'}</p>
+                ${pgResult.explanation ? `<p class="text-sm mt-2">${pgResult.explanation}</p>` : ''}
+            `;
+            
+            // VirusTotal result
+            const vtThreat = vtResult.is_threat;
+            const vtClean = vtResult.success && !vtResult.is_threat;
+            vtDiv.innerHTML = `
+                ${vtResult.error ? `<p class="text-gray-400">${vtResult.error}</p>` : `
+                    <span class="px-2 py-1 rounded text-sm font-bold ${vtThreat ? 'bg-red-600' : 'bg-green-600'}">
+                        ${vtThreat ? 'THREAT DETECTED' : 'CLEAN'}
+                    </span>
+                    <p class="mt-2 text-sm">Detection: ${vtResult.detection_rate || '0/0'}</p>
+                    ${vtResult.stats ? `<p class="text-sm text-gray-400">Malicious: ${vtResult.stats.malicious} | Suspicious: ${vtResult.stats.suspicious}</p>` : ''}
+                `}
+            `;
+            
+            // Combined verdict
+            let verdictText = '';
+            let verdictClass = '';
+            
+            if (pgThreat && vtThreat) {
+                // Both agree it's bad
+                verdictText = '🚨 <strong>HIGH RISK - CONFIRMED THREAT</strong><br><span class="text-sm">Both scanners detected this URL as malicious. Do NOT visit this site!</span>';
+                verdictClass = 'border-red-500 bg-red-900/30';
+            } else if (pgThreat && !vtThreat) {
+                // PhishGuard flagged, VT didn't
+                verdictText = '⚠️ <strong>POTENTIAL NEW THREAT</strong><br><span class="text-sm">PhishGuard detected suspicious patterns, but VirusTotal has no reports yet. This may be a new phishing attempt. Proceed with caution!</span>';
+                verdictClass = 'border-yellow-500 bg-yellow-900/30';
+            } else if (!pgThreat && vtThreat) {
+                // VT flagged, PhishGuard didn't
+                verdictText = '⚠️ <strong>KNOWN THREAT</strong><br><span class="text-sm">VirusTotal has flagged this URL. Even though PhishGuard\'s patterns didn\'t match, this is likely malicious based on threat intelligence.</span>';
+                verdictClass = 'border-orange-500 bg-orange-900/30';
+            } else if (pgSuspicious) {
+                // PhishGuard suspicious, VT clean
+                verdictText = '⚡ <strong>SUSPICIOUS - MONITOR</strong><br><span class="text-sm">Some suspicious patterns detected but not confirmed malicious. Exercise caution.</span>';
+                verdictClass = 'border-yellow-500 bg-yellow-900/20';
             } else {
-                threatClass = 'border-green-500 bg-green-900 bg-opacity-20';
-                threatColor = 'bg-green-600 text-white';
+                // Both agree it's safe
+                verdictText = '✅ <strong>APPEARS SAFE</strong><br><span class="text-sm">Both scanners indicate this URL is safe. However, always remain vigilant!</span>';
+                verdictClass = 'border-green-500 bg-green-900/30';
             }
             
-            detailsDiv.innerHTML = `
-                <div class="flex items-center space-x-4 mb-3">
-                    <span class="px-3 py-1 rounded font-semibold ${threatColor}">
-                        ${result.classification.toUpperCase()}
-                    </span>
-                    <span class="text-lg font-bold">Confidence: ${confidencePercent}%</span>
-                </div>
-                
-                <div class="text-sm text-gray-300">
-                    <p><strong>Threat Level:</strong> ${result.threat_level}</p>
-                    <p><strong>Phishing Probability:</strong> ${phishingPercent}%</p>
-                    
-                    ${result.explanation ? `
-                        <p class="mt-2"><strong>Explanation:</strong> ${result.explanation}</p>
-                    ` : ''}
-                    
-                    ${result.risk_factors && result.risk_factors.length > 0 ? `
-                        <div class="mt-3">
-                            <p><strong>Risk Factors:</strong></p>
-                            <ul class="list-disc list-inside mt-1 ml-4">
-                                ${result.risk_factors.map(factor => `<li>${factor}</li>`).join('')}
-                            </ul>
-                        </div>
-                    ` : ''}
-                    
-                    ${result.scan_id ? `
-                        <p class="mt-2 text-xs text-gray-400">
-                            <strong>Scan ID:</strong> ${result.scan_id}
-                        </p>
-                    ` : ''}
-                </div>
-            `;
+            verdictDiv.innerHTML = verdictText;
+            verdictDiv.className = `p-4 rounded border-2 ${verdictClass}`;
             
-            resultDiv.className = `mt-6 p-4 rounded border-l-4 ${threatClass}`;
             resultDiv.classList.remove('hidden');
         }
 
-        function showError(message) {
-            const resultDiv = document.getElementById('scan-result');
-            const detailsDiv = document.getElementById('scan-details');
+        // Dashboard functions
+        async function refreshData() {
+            const btn = document.getElementById('refresh-btn');
+            const icon = document.getElementById('refresh-icon');
+            const text = document.getElementById('refresh-text');
             
-            detailsDiv.innerHTML = `
-                <div class="flex items-center space-x-4 mb-3">
-                    <span class="px-3 py-1 rounded font-semibold bg-red-600 text-white">ERROR</span>
-                </div>
-                <div class="text-sm text-gray-300">
-                    <p>${message}</p>
-                </div>
-            `;
+            // Show loading state
+            icon.classList.add('animate-spin');
+            text.textContent = 'Loading...';
+            btn.disabled = true;
             
-            resultDiv.className = 'mt-6 p-4 rounded border-l-4 border-red-500 bg-red-900 bg-opacity-20';
-            resultDiv.classList.remove('hidden');
+            // Reset all forms
+            document.getElementById('url-form').reset();
+            document.getElementById('compare-form').reset();
+            document.getElementById('ssl-form').reset();
+            document.getElementById('email-form').reset();
+            
+            // Hide all result divs
+            document.getElementById('url-result').classList.add('hidden');
+            document.getElementById('compare-result').classList.add('hidden');
+            document.getElementById('ssl-result').classList.add('hidden');
+            document.getElementById('email-result').classList.add('hidden');
+            
+            // Refresh stats
+            await fetchStats();
+            
+            // Show success flash
+            text.textContent = 'Ready!';
+            icon.textContent = '✅';
+            icon.classList.remove('animate-spin');
+            
+            // Reset button after 1 second
+            setTimeout(() => {
+                text.textContent = 'Refresh';
+                icon.textContent = '🔄';
+                btn.disabled = false;
+            }, 1000);
         }
 
-        // Placeholder function for refresh button
-        function refreshData() {
-            console.log('Fetching stats...');
-            fetchStats();
-        }
-
-        // Fetch and update dashboard stats
         async function fetchStats() {
             try {
                 const response = await fetch('/stats');
                 if (response.ok) {
                     const stats = await response.json();
-                    
                     document.getElementById('total-urls').textContent = stats.total_urls;
                     document.getElementById('phishing-count').textContent = stats.phishing_count;
                     document.getElementById('suspected-count').textContent = stats.suspicious_count;
                     document.getElementById('benign-count').textContent = stats.benign_count;
-                } else {
-                    console.error('Failed to fetch stats');
                 }
             } catch (error) {
                 console.error('Error fetching stats:', error);
             }
         }
 
-        // Load stats when page loads
         document.addEventListener('DOMContentLoaded', function() {
             fetchStats();
         });

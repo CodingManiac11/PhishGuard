@@ -67,3 +67,66 @@ class ScanResult(BaseModel):
     hosted_infrastructure: Optional[bool] = None
     infrastructure_type: Optional[str] = None
     screenshot_path: Optional[str] = None
+
+
+# New Security Scan Schemas
+class VirusTotalScanRequest(BaseModel):
+    url: str
+
+
+class VirusTotalScanResult(BaseModel):
+    success: bool
+    is_threat: bool
+    threat_level: Optional[str] = None
+    stats: Optional[Dict[str, int]] = None
+    detection_rate: Optional[str] = None
+    categories: Optional[Dict[str, str]] = None
+    summary: Optional[str] = None
+    error: Optional[str] = None
+
+
+class SSLAnalysisRequest(BaseModel):
+    url: str
+
+
+class SSLAnalysisResult(BaseModel):
+    success: bool
+    is_secure: bool
+    risk_level: Optional[str] = None
+    hostname: Optional[str] = None
+    certificate: Optional[Dict[str, Any]] = None
+    issues: Optional[List[str]] = None
+    warnings: Optional[List[str]] = None
+    summary: Optional[str] = None
+    error: Optional[str] = None
+
+
+class QRScanRequest(BaseModel):
+    image_base64: str
+
+
+class QRScanResult(BaseModel):
+    success: bool
+    found: Optional[bool] = None
+    count: Optional[int] = None
+    urls: Optional[List[str]] = None
+    data: Optional[List[Dict[str, Any]]] = None
+    message: Optional[str] = None
+    error: Optional[str] = None
+
+
+class EmailAnalysisRequest(BaseModel):
+    headers: str
+
+
+class EmailAnalysisResult(BaseModel):
+    success: bool
+    is_suspicious: bool
+    risk_level: Optional[str] = None
+    sender: Optional[Dict[str, str]] = None
+    authentication: Optional[Dict[str, Any]] = None
+    issues: Optional[List[str]] = None
+    warnings: Optional[List[str]] = None
+    summary: Optional[str] = None
+    error: Optional[str] = None
+
