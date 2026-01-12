@@ -106,7 +106,9 @@ screenshots/
 # Evidence/HTML Files (Contains website snapshots)
 evidence/
 backend/evidence/
+# Ignore HTML files except frontend
 *.html
+!backend/frontend/*.html
 
 # Logs
 *.log
