@@ -383,7 +383,16 @@ async def health_check():
     return {
         "status": "healthy",
         "database": "JSON File Storage",
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.utcnow().isoformat(),
+        "services": {
+            "virustotal": {
+                "configured": virustotal_service.is_configured(),
+                "key_configured": bool(settings.virustotal_api_key)
+            },
+            "google_safe_browsing": {
+                "configured": bool(settings.google_safe_browsing_api_key)
+            }
+        }
     }
 
 

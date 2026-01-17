@@ -62,7 +62,7 @@ env.bak/
 venv.bak/
 
 # Environment Variables (CRITICAL - Contains sensitive data)
-
+.env
 .env.local
 .env.production
 .env.staging

@@ -109,6 +109,14 @@ TRUSTED_DOMAINS = {
     # Video & Media
     'youtu.be', 'vimeo.com', 'dailymotion.com',
     'tiktok.com', 'www.tiktok.com',
+    
+    # IT Services & Consulting (Legitimate targets for typosquatting)
+    'tcs.com', 'www.tcs.com', 'on.tcs.com',
+    'infosys.com', 'www.infosys.com',
+    'wipro.com', 'www.wipro.com',
+    'hcl.com', 'www.hcl.com', 'hcltech.com',
+    'capgemini.com', 'www.capgemini.com',
+    'accenture.com', 'www.accenture.com',
 }
 
 
@@ -726,11 +734,19 @@ class HybridClassifier:
                 features.get('has_short_random_path', False),
                 features.get('has_uncommon_tld', False),
                 features.get('http_without_https', False) and features.get('has_suspicious_file_extension', False),  # HTTP + download = very suspicious
+                features.get('typosquatting_score', 0) > 0.7, # [NEW] Typosquatting detected
             ]
             
             # CRITICAL: Immediate phishing classification for dangerous combinations
+            
+            # [NEW] High confidence typosquatting (e.g. tcs.corn) is an immediate blocking offense
+            if features.get('typosquatting_score', 0) > 0.8:
+                prediction_label = 'phishing'
+                threat_level = 'HIGH'
+                risk_factors.append(f"High-confidence typosquatting detected (Score: {features.get('typosquatting_score'):.2f})")
+                
             # HTTP + suspicious file extension = likely malware download
-            if features.get('http_without_https', False) and features.get('has_suspicious_file_extension', False):
+            elif features.get('http_without_https', False) and features.get('has_suspicious_file_extension', False):
                 prediction_label = 'phishing'
                 threat_level = 'HIGH'
                 risk_factors.append('HTTP download with suspicious file extension (likely malware)')

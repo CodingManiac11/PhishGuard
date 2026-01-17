@@ -61,7 +61,10 @@ class FeatureExtractor:
             'salesforce.com', 'oracle.com', 'ibm.com', 'adobe.com', 'dropbox.com',
             'slack.com', 'zoom.us', 'atlassian.com', 'hubspot.com',
             # Other
-            'reddit.com', 'pinterest.com', 'tumblr.com', 'discord.com', 'twitch.tv'
+            'reddit.com', 'pinterest.com', 'tumblr.com', 'discord.com', 'twitch.tv',
+            
+            # IT Services (for typosquatting baselines)
+            'tcs.com', 'infosys.com', 'wipro.com', 'hcl.com', 'capgemini.com', 'accenture.com'
         ]
         
         self.suspicious_tlds = [
@@ -314,45 +317,79 @@ class FeatureExtractor:
         return consonant_count / len(letters)
     
     def _detect_typosquatting(self, hostname: str) -> float:
-        """Detect common typosquatting patterns"""
+        """Detect advanced typosquatting patterns including visual homoglyphs"""
         hostname_lower = hostname.lower()
         max_score = 0.0
         
-        # Common character substitutions used in typosquatting
+        # 1. Visual Homoglyphs (Combosquatting)
+        # These are character combinations that look like other characters
+        visual_replacements = {
+            'rn': 'm',
+            'cl': 'd',
+            'vv': 'w',
+            'nn': 'm',
+            'ol': 'd',
+            'lc': 'k',
+        }
+        
+        # 2. Common character substitutions
         substitutions = {
             'o': ['0', 'ο'],  # o -> zero, Greek omicron
             'i': ['1', 'l', '!'],
             'l': ['1', 'i', '|'],
-            'a': ['@', '4', 'а'],  # a -> @, 4, Cyrillic a
-            'e': ['3', 'е'],  # e -> 3, Cyrillic e
+            'a': ['@', '4', 'а'], 
+            'e': ['3', 'е'],
             's': ['5', '$'],
             'g': ['9', '6'],
+            'm': ['rn', 'nn'], # m -> rn spoofing
+            'w': ['vv'],       # w -> vv spoofing
+            'd': ['cl'],       # d -> cl spoofing
         }
         
         for domain in self.legitimate_domains:
             brand = domain.split('.')[0].lower()
+            if len(brand) < 4: continue # Skip very short brands to avoid FPs
             
-            # Check if hostname contains modified version of brand
+            # Check for "rn" -> "m" style visual spoofing (e.g., tcs.corn -> tcs.com)
+            # Create a "normalized" version of the hostname where visual tricks are resolved
+            normalized_hostname = hostname_lower
+            for visual, char in visual_replacements.items():
+                normalized_hostname = normalized_hostname.replace(visual, char)
+            
+            if brand in normalized_hostname and brand not in hostname_lower:
+                 # "brand" appearing in normalized but not original implies visual spoofing
+                 max_score = max(max_score, 0.95)
+            
+            # Check for regular substitutions
             for char, subs in substitutions.items():
                 for sub in subs:
-                    typo_variant = brand.replace(char, sub)
-                    if typo_variant in hostname_lower and typo_variant != brand:
-                        max_score = max(max_score, 0.9)
-            
-            # Check for missing/extra characters (simple heuristic)
-            if len(brand) >= 4:
-                # Missing character
-                for i in range(len(brand)):
-                    truncated = brand[:i] + brand[i+1:]
-                    if len(truncated) >= 3 and truncated in hostname_lower:
-                        max_score = max(max_score, 0.7)
+                    # Check if 'brand' with replacement 'sub' exists in hostname
+                    # E.g. brand="micro", sub="1" -> "m1cro"
+                    try:
+                        brand_with_sub = brand.replace(char, sub)
+                        if brand_with_sub in hostname_lower and brand_with_sub != brand:
+                            max_score = max(max_score, 0.9)
+                    except Exception:
+                        continue
+
+            # 3. Levenshtein Distance Check (Insertions/Deletions)
+            # e.g., rmicrosoft.com (INSERT 'r')
+            # Extract the SLD (Second Level Domain) from hostname for comparison
+            parts = hostname_lower.split('.')
+            if len(parts) >= 2:
+                sld = parts[-2] # assume tcs.com -> tcs, or tcs.co.uk -> co (simple heuristic)
+                if len(parts) > 2 and len(parts[-1]) == 2: # heuristic for co.uk
+                     sld = parts[-3]
+
+                # Calculate distance between SLD and Brand
+                dist = levenshtein_distance(sld, brand)
                 
-                # Swapped adjacent characters
-                for i in range(len(brand) - 1):
-                    swapped = brand[:i] + brand[i+1] + brand[i] + brand[i+2:]
-                    if swapped in hostname_lower and swapped != brand:
-                        max_score = max(max_score, 0.8)
-        
+                # If distance is small (1 or 2) and string length is sufficient
+                if dist == 1 and len(brand) > 4:
+                    max_score = max(max_score, 0.85) # Very distinct typesquat
+                elif dist == 2 and len(brand) > 6:
+                    max_score = max(max_score, 0.7)
+
         return max_score
     
     def _detect_brand_in_path(self, path: str) -> bool:
@@ -511,15 +548,27 @@ class FeatureExtractor:
         normal_vowel_ratio = 0.4
         randomness = abs(vowel_ratio - normal_vowel_ratio) * 2
         
-        # Check for repeated characters (another randomness indicator)
+        # [MODIFIED] Check for repeated characters (another randomness indicator)
         char_counts = {}
         for char in text.lower():
             char_counts[char] = char_counts.get(char, 0) + 1
         
+        # Penalize only if repetition is excessive relative to length
         max_repeat = max(char_counts.values()) if char_counts else 0
-        repeat_penalty = min(max_repeat / len(text), 0.5)
+        repeat_penalty = 0
+        if len(text) > 4 and max_repeat > len(text) * 0.5: # Only if >50% chars are same
+             repeat_penalty = 0.4
         
-        return min(randomness + repeat_penalty, 1.0)
+        score = randomness + repeat_penalty
+        
+        # [MODIFIED] Relax score for short strings (acronyms often have no vowels)
+        # e.g. "tcs" -> 0 vowels -> high randomness originally.
+        if len(text) <= 4:
+            score = score * 0.3 # Significantly reduce impact for acronyms
+        elif len(text) <= 6:
+            score = score * 0.6
+            
+        return min(score, 1.0)
     
     def _calculate_entropy(self, text: str) -> float:
         """Calculate Shannon entropy of text"""

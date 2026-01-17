@@ -27,9 +27,10 @@ class VirusTotalService:
         }
         
         if self.api_key:
-            logger.info("✅ VirusTotal API initialized")
+            masked_key = f"{self.api_key[:4]}...{self.api_key[-4:]}" if len(self.api_key) > 8 else "***"
+            logger.info(f"✅ VirusTotal API initialized (Key: {masked_key})")
         else:
-            logger.warning("⚠️ VirusTotal API key not configured")
+            logger.warning("⚠️ VirusTotal API key not configured (Env: PHISHGUARD_VIRUSTOTAL_API_KEY or VIRUSTOTAL_API_KEY)")
     
     def is_configured(self) -> bool:
         """Check if API key is configured"""
